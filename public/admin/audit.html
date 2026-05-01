@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC Admin — Audit Trail</title>
+    <link rel="stylesheet" href="../css/admin-style.css">
+    <style>
+        .log-type-dot { width:0.45rem;height:0.45rem;border-radius:50%;flex-shrink:0;margin-top:0.4rem; }
+        .timeline-line { position:absolute;left:1.6rem;top:0;bottom:0;width:1px;background:var(--border); }
+        .timeline-item { position:relative;padding:0 0 1.25rem 3.25rem; }
+        .timeline-dot {
+            position:absolute;left:1.2rem;top:0.2rem;
+            width:0.75rem;height:0.75rem;border-radius:50%;
+            border:2px solid var(--bg-card);
+            z-index:1;
+        }
+        .timeline-time { font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);margin-bottom:0.2rem; }
+        .timeline-action { font-size:0.875rem;font-weight:600;color:var(--text-primary);margin-bottom:0.2rem; }
+        .timeline-detail { font-size:0.8rem;color:var(--text-muted);line-height:1.5; }
+        .log-source-chip {
+            display:inline-flex;align-items:center;gap:0.3rem;
+            padding:0.15rem 0.55rem;border-radius:9999px;
+            font-family:var(--font-mono);font-size:0.65rem;
+            background:var(--bg-hover);color:var(--text-muted);
+            border:1px solid var(--border);margin-left:0.5rem;
+        }
+        .export-btn {
+            display:inline-flex;align-items:center;gap:0.4rem;
+            padding:0.45rem 0.875rem;
+            background:var(--bg-hover);border:1px solid var(--border-light);
+            border-radius:var(--radius-sm);color:var(--text-secondary);
+            font-size:0.8rem;font-weight:600;cursor:pointer;
+            transition:all var(--ease);font-family:var(--font-display);
+        }
+        .export-btn:hover { background:var(--accent-dim);border-color:rgba(99,102,241,0.3);color:var(--text-accent); }
+        .export-btn svg { width:0.85rem;height:0.85rem; }
+    </style>
+</head>
+<body>
+
+<header class="admin-topbar">
+    <a href="dashboard.html" class="topbar-brand">
+        <div class="topbar-brand-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <span class="topbar-brand-name">VALIDATA GC</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-page-title">System Administrator</span>
+    <div class="topbar-right">
+        <div class="topbar-user-info"><div class="topbar-user-name" data-admin-name>Loading…</div><div class="topbar-user-role" data-admin-role></div></div>
+        <div class="topbar-avatar" data-admin-avatar>A</div>
+        <button class="btn-signout" id="signOutBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+    </div>
+</header>
+
+<div class="admin-body">
+    <nav class="admin-sidebar">
+        <p class="sidebar-label">System</p>
+        <a href="dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Overview</a>
+        <a href="rbac.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Access Control</a>
+        <a href="audit.html" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Audit Trail</a>
+        <a href="ai-config.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>AI Configuration</a>
+        <a href="backup.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Backup & Security</a>
+        <p class="sidebar-label" style="margin-top:1rem;">External</p>
+        <a href="../moderator/dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Moderator Portal</a>
+        <a href="../index.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Student App</a>
+    </nav>
+
+    <main class="admin-main" style="padding:0;display:flex;flex-direction:column;">
+
+        <div class="page-header">
+            <div class="page-header-row">
+                <div>
+                    <h1 class="page-title">Audit Trail Logging</h1>
+                    <p class="page-sub">Complete record of all fact-check queries, moderator actions, and system decisions</p>
+                </div>
+                <div style="display:flex;gap:0.75rem;">
+                    <button class="export-btn" id="exportModBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export Mod Logs
+                    </button>
+                    <button class="export-btn" id="exportClaimsBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export Claims
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
+            <div class="stat-grid stat-grid-4" style="margin-bottom:0;">
+                <div class="stat-tile"><div class="stat-label">Total Log Entries</div><div class="stat-value indigo" id="statTotal">–</div></div>
+                <div class="stat-tile"><div class="stat-label">Student Queries</div><div class="stat-value blue" id="statClaims">–</div></div>
+                <div class="stat-tile"><div class="stat-label">Mod Actions</div><div class="stat-value green" id="statModActions">–</div></div>
+                <div class="stat-tile"><div class="stat-label">Admin Actions</div><div class="stat-value amber" id="statAdminActions">–</div></div>
+            </div>
+        </div>
+
+        <!-- Two-column layout -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;flex:1;min-height:0;">
+
+            <!-- Moderator Activity Log -->
+            <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;">
+                <div class="toolbar" style="justify-content:space-between;">
+                    <p style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);">Moderator Actions</p>
+                    <div style="display:flex;gap:0.5rem;">
+                        <select class="filter-select" id="filterModAction">
+                            <option value="all">All Actions</option>
+                            <option value="claim">Claim Decisions</option>
+                            <option value="source">Source Changes</option>
+                            <option value="tag">Tag Changes</option>
+                            <option value="qc">QC Reports</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:1.25rem 1.5rem;position:relative;">
+                    <div class="timeline-line"></div>
+                    <div id="modTimeline">
+                        <div style="padding:2rem 0;color:var(--text-muted);font-size:0.84rem;">Loading activity…</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Student Claims Log -->
+            <div style="display:flex;flex-direction:column;">
+                <div class="toolbar" style="justify-content:space-between;">
+                    <p style="font-family:var(--font-mono);font-size:0.7rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);">Student Fact-Check Queries</p>
+                    <div style="display:flex;gap:0.5rem;">
+                        <select class="filter-select" id="filterVerdict">
+                            <option value="all">All Verdicts</option>
+                            <option value="True">True</option>
+                            <option value="False">False</option>
+                            <option value="Mixed">Mixed</option>
+                            <option value="Unverified">Unverified</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;">
+                    <table class="admin-table" id="claimsTable">
+                        <thead>
+                            <tr>
+                                <th>Query</th>
+                                <th>Verdict</th>
+                                <th>User</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="claimsBody">
+                            <tr><td colspan="4" style="padding:2rem;"><div class="skeleton" style="height:14px;width:70%;"></div></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="toastContainer"></div>
+
+<script type="module">
+    import { requireAdmin }                                   from "../js/admin-auth.js";
+    import { adminSignOut, getAuditLogs,
+             getHistoryLogs, exportCollection }               from "../js/admin-firebase.js";
+
+    const VERDICT_COLORS = {
+        "True":"var(--green)","False":"var(--red)",
+        "Mixed":"var(--amber)","Unverified":"var(--purple)",
+        "Cannot verify":"var(--text-muted)"
+    };
+
+    const ACTION_LABELS = {
+        claim_approved:"Approved claim verdict", claim_rejected:"Rejected claim verdict",
+        source_added:"Added trusted source", source_toggled:"Toggled source status",
+        source_deleted:"Deleted source", tag_created:"Created misinfo tag",
+        tag_flagged:"Updated tag flag", tag_deleted:"Deleted misinfo tag",
+        tag_instance_logged:"Logged misinfo instance", qc_report_saved:"Saved QC report",
+        ai_config_updated:"Updated AI config"
+    };
+
+    const ACTION_COLORS = {
+        claim_approved:"var(--green)", claim_rejected:"var(--red)",
+        source_added:"var(--accent)", source_deleted:"var(--red)",
+        tag_created:"var(--amber)", qc_report_saved:"var(--blue)",
+        ai_config_updated:"var(--purple)"
+    };
+
+    const ACTION_GROUPS = {
+        claim:  ["claim_approved","claim_rejected"],
+        source: ["source_added","source_toggled","source_deleted"],
+        tag:    ["tag_created","tag_flagged","tag_deleted","tag_instance_logged"],
+        qc:     ["qc_report_saved"]
+    };
+
+    function toast(msg) {
+        const el = document.createElement("div");
+        el.className = "toast toast-success";
+        el.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>${msg}</span>`;
+        document.getElementById("toastContainer").appendChild(el);
+        setTimeout(() => el.remove(), 3000);
+    }
+
+    function formatDate(ts) {
+        if (!ts) return "—";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleDateString("en-PH",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+    }
+
+    function truncate(s, n) { return s?.length > n ? s.substring(0, n) + "…" : (s || "—"); }
+
+    let modLogs   = [];
+    let claimLogs = [];
+
+    function renderModTimeline() {
+        const filter = document.getElementById("filterModAction").value;
+        const tl = document.getElementById("modTimeline");
+
+        let logs = modLogs;
+        if (filter !== "all") {
+            const allowed = ACTION_GROUPS[filter] || [];
+            logs = logs.filter(l => allowed.includes(l.action));
+        }
+
+        document.getElementById("statModActions").textContent = modLogs.length;
+
+        if (logs.length === 0) {
+            tl.innerHTML = `<div style="padding:2rem 0;color:var(--text-muted);font-size:0.84rem;">No moderator activity logged yet.</div>`;
+            return;
+        }
+
+        tl.innerHTML = logs.slice(0, 60).map(l => {
+            const color  = ACTION_COLORS[l.action] || "var(--accent)";
+            const label  = ACTION_LABELS[l.action] || l.action;
+            const detail = l.details ? JSON.stringify(l.details).replace(/[{}"]/g,"").substring(0,60) : "";
+            return `
+            <div class="timeline-item">
+                <div class="timeline-dot" style="background:${color};box-shadow:0 0 6px ${color}60;"></div>
+                <div class="timeline-time">${formatDate(l.timestamp)}</div>
+                <div class="timeline-action">${label}</div>
+                ${detail ? `<div class="timeline-detail">${detail}</div>` : ""}
+            </div>`;
+        }).join("");
+    }
+
+    function renderClaimsTable() {
+        const filter = document.getElementById("filterVerdict").value;
+        const tbody  = document.getElementById("claimsBody");
+
+        let logs = claimLogs;
+        if (filter !== "all") logs = logs.filter(c => c.credibility === filter);
+
+        document.getElementById("statClaims").textContent = claimLogs.length;
+
+        if (logs.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><p>No student queries yet.</p></div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = logs.slice(0, 100).map(c => {
+            const verdict = c.credibility || "Unverified";
+            const color   = VERDICT_COLORS[verdict] || "var(--text-muted)";
+            return `
+            <tr>
+                <td style="max-width:14rem;">
+                    <div style="font-size:0.84rem;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${truncate(c.inputText, 50)}</div>
+                </td>
+                <td><span class="badge" style="background:${color}18;color:${color};border-color:${color}30;">${verdict}</span></td>
+                <td style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">${truncate(c.userEmail || "Guest", 22)}</td>
+                <td style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">${formatDate(c.createdAt)}</td>
+            </tr>`;
+        }).join("");
+    }
+
+    // Export to JSON
+    function downloadJson(data, filename) {
+        const clean = data.map(d => {
+            const obj = { ...d };
+            // Convert Firestore timestamps to strings
+            Object.keys(obj).forEach(k => {
+                if (obj[k]?.toDate) obj[k] = obj[k].toDate().toISOString();
+            });
+            return obj;
+        });
+        const blob = new Blob([JSON.stringify(clean, null, 2)], { type: "application/json" });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    document.getElementById("exportModBtn").addEventListener("click", () => {
+        downloadJson(modLogs, `validata_mod_audit_${new Date().toISOString().slice(0,10)}.json`);
+        toast("Moderator logs exported.");
+    });
+
+    document.getElementById("exportClaimsBtn").addEventListener("click", () => {
+        downloadJson(claimLogs, `validata_claims_${new Date().toISOString().slice(0,10)}.json`);
+        toast("Claims log exported.");
+    });
+
+    document.getElementById("filterModAction").addEventListener("change", renderModTimeline);
+    document.getElementById("filterVerdict").addEventListener("change", renderClaimsTable);
+    document.getElementById("signOutBtn").addEventListener("click", () => adminSignOut());
+
+    requireAdmin(async (profile) => {
+        [modLogs, claimLogs] = await Promise.all([getAuditLogs(), getHistoryLogs()]);
+
+        document.getElementById("statTotal").textContent       = modLogs.length + claimLogs.length;
+        document.getElementById("statAdminActions").textContent = 0;
+
+        renderModTimeline();
+        renderClaimsTable();
+    });
+</script>
+</body>
+</html>

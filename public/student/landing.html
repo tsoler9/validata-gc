@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC - Validate Before Sharing</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --blue-primary: #2563eb;
+            --blue-dark: #1d4ed8;
+            --blue-light: #eff6ff;
+            --blue-mid: #3b82f6;
+            --blue-pale: #dbeafe;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #ffffff;
+            color: #1f2937;
+            overflow-x: hidden;
+        }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(37,99,235,0.1);
+            height: 4.5rem;
+        }
+        .nav-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            height: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: var(--blue-primary);
+            text-decoration: none;
+            letter-spacing: -0.02em;
+        }
+        .nav-links { display: flex; gap: 2rem; align-items: center; }
+        .nav-link {
+            font-size: 0.95rem;
+            color: #6b7280;
+            text-decoration: none;
+            transition: color 0.2s;
+            font-weight: 500;
+        }
+        .nav-link:hover { color: var(--blue-primary); }
+        .nav-cta {
+            padding: 0.5rem 1.25rem;
+            background: var(--blue-primary);
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+        .nav-cta:hover { background: var(--blue-dark); }
+
+        /* ── HERO ── */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 6rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+        }
+
+        /* gradient mesh background */
+        .hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 80% 80%, rgba(59,130,246,0.08) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 40% at 10% 70%, rgba(37,99,235,0.06) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        /* floating grid dots */
+        .hero::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(37,99,235,0.08) 1px, transparent 1px);
+            background-size: 32px 32px;
+            pointer-events: none;
+            mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+        }
+
+        .hero-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--blue-light);
+            border: 1px solid var(--blue-pale);
+            color: var(--blue-primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 0.35rem 0.9rem;
+            border-radius: 999px;
+            margin-bottom: 1.75rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.6s ease both;
+        }
+        .eyebrow-dot {
+            width: 6px; height: 6px;
+            background: var(--blue-primary);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .hero-title {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(2.8rem, 7vw, 5rem);
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            color: #0f172a;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.6s 0.1s ease both;
+        }
+        .hero-title .gradient-text {
+            background: linear-gradient(135deg, var(--blue-primary) 0%, #60a5fa 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.2rem);
+            color: #6b7280;
+            max-width: 520px;
+            line-height: 1.7;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.6s 0.2s ease both;
+        }
+
+        .hero-actions {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.6s 0.3s ease both;
+        }
+
+        .btn-hero-primary {
+            padding: 0.875rem 2rem;
+            background: var(--blue-primary);
+            color: white;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 14px rgba(37,99,235,0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-hero-primary:hover {
+            background: var(--blue-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(37,99,235,0.4);
+        }
+
+        .btn-hero-secondary {
+            padding: 0.875rem 2rem;
+            background: white;
+            color: #374151;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            text-decoration: none;
+            border: 1.5px solid #e5e7eb;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-hero-secondary:hover {
+            border-color: var(--blue-primary);
+            color: var(--blue-primary);
+            transform: translateY(-2px);
+        }
+
+        .hero-stats {
+            display: flex;
+            gap: 2.5rem;
+            justify-content: center;
+            margin-top: 3.5rem;
+            position: relative;
+            z-index: 1;
+            animation: fadeUp 0.6s 0.4s ease both;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-num {
+            font-family: 'Sora', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--blue-primary);
+        }
+        .stat-label {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            font-weight: 500;
+            letter-spacing: 0.03em;
+        }
+        .stat-divider {
+            width: 1px;
+            background: #e5e7eb;
+            align-self: stretch;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── HOW IT WORKS ── */
+        .how-section {
+            padding: 6rem 2rem;
+            background: #f8faff;
+            position: relative;
+        }
+        .how-section::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--blue-pale), transparent);
+        }
+
+        .section-label {
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--blue-primary);
+            margin-bottom: 0.75rem;
+        }
+        .section-title {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 800;
+            text-align: center;
+            color: #0f172a;
+            letter-spacing: -0.02em;
+            margin-bottom: 1rem;
+        }
+        .section-subtitle {
+            text-align: center;
+            color: #6b7280;
+            font-size: 1rem;
+            max-width: 480px;
+            margin: 0 auto 4rem;
+            line-height: 1.7;
+        }
+
+        .steps-grid {
+            max-width: 900px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            position: relative;
+        }
+
+        /* connecting line */
+        .steps-grid::before {
+            content: '';
+            position: absolute;
+            top: 2rem;
+            left: calc(16.66% + 1rem);
+            right: calc(16.66% + 1rem);
+            height: 2px;
+            background: linear-gradient(90deg, var(--blue-pale), var(--blue-primary), var(--blue-pale));
+            z-index: 0;
+        }
+
+        .step-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            border: 1.5px solid #e5e7eb;
+            transition: all 0.3s;
+            position: relative;
+            z-index: 1;
+        }
+        .step-card:hover {
+            border-color: var(--blue-primary);
+            box-shadow: 0 8px 30px rgba(37,99,235,0.12);
+            transform: translateY(-4px);
+        }
+
+        .step-number {
+            width: 3.5rem;
+            height: 3.5rem;
+            background: linear-gradient(135deg, var(--blue-primary), var(--blue-mid));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Sora', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin: 0 auto 1.25rem;
+            box-shadow: 0 4px 12px rgba(37,99,235,0.3);
+        }
+
+        .step-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .step-title {
+            font-family: 'Sora', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        .step-desc {
+            font-size: 0.875rem;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* ── FEATURES ── */
+        .features-section {
+            padding: 6rem 2rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.25rem;
+            margin-top: 0;
+        }
+
+        .feature-card {
+            padding: 1.75rem;
+            border-radius: 14px;
+            border: 1.5px solid #e5e7eb;
+            transition: all 0.3s;
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        .feature-card:hover {
+            border-color: var(--blue-primary);
+            background: var(--blue-light);
+        }
+
+        .feature-icon-wrap {
+            width: 2.75rem;
+            height: 2.75rem;
+            background: var(--blue-light);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+            border: 1px solid var(--blue-pale);
+        }
+
+        .feature-title {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 0.95rem;
+            margin-bottom: 0.3rem;
+        }
+        .feature-desc {
+            font-size: 0.85rem;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* ── CTA SECTION ── */
+        .cta-section {
+            padding: 5rem 2rem;
+            text-align: center;
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 50%, #3b82f6 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .cta-section::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+        .cta-title {
+            font-family: 'Sora', sans-serif;
+            font-size: clamp(1.75rem, 4vw, 2.5rem);
+            font-weight: 800;
+            color: white;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        .cta-subtitle {
+            color: rgba(255,255,255,0.8);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        .btn-cta {
+            padding: 0.875rem 2.5rem;
+            background: white;
+            color: var(--blue-primary);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+        }
+        .btn-cta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+        }
+
+        /* ── FOOTER ── */
+        footer {
+            background: #0f172a;
+            color: #94a3b8;
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        footer span { color: var(--blue-mid); font-weight: 600; }
+
+        /* ── SCROLL REVEAL ── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        @media (max-width: 768px) {
+            .steps-grid { grid-template-columns: 1fr; }
+            .steps-grid::before { display: none; }
+            .features-grid { grid-template-columns: 1fr; }
+            .hero-stats { gap: 1.5rem; }
+            .stat-num { font-size: 1.2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">VALIDATA GC</a>
+            <div class="nav-links">
+                <a href="#how-it-works" class="nav-link">How it works</a>
+                <a href="login.html" class="nav-cta">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-eyebrow">
+            <div class="eyebrow-dot"></div>
+            Gordon College Fact-Checker
+        </div>
+        <h1 class="hero-title">
+            <span class="gradient-text">Validate</span> Before<br>You Share
+        </h1>
+        <p class="hero-subtitle">
+            AI-powered fact-checking built for Gordon College students.
+            Paste any text or article link — get an instant credibility verdict.
+        </p>
+        <div class="hero-actions">
+            <a href="login.html" class="btn-hero-primary">
+                Start Verifying
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+            <a href="#how-it-works" class="btn-hero-secondary">
+                How it works
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="stat">
+                <div class="stat-num">AI</div>
+                <div class="stat-label">Powered Analysis</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+                <div class="stat-num">4</div>
+                <div class="stat-label">Credibility Labels</div>
+            </div>
+            <div class="stat-divider"></div>
+            <div class="stat">
+                <div class="stat-num">GC</div>
+                <div class="stat-label">Students Only</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-section" id="how-it-works">
+        <div class="section-label">How it works</div>
+        <h2 class="section-title">Fact-check in 3 simple steps</h2>
+        <p class="section-subtitle">No complex setup. Just paste your content and let the AI do the work.</p>
+
+        <div class="steps-grid reveal">
+            <div class="step-card">
+                <div class="step-number">1</div>
+                <div class="step-icon">📋</div>
+                <div class="step-title">Paste Your Content</div>
+                <div class="step-desc">Enter any news article text, a claim, a statement, or paste a URL from any news site.</div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">2</div>
+                <div class="step-icon">🤖</div>
+                <div class="step-title">AI Analyzes It</div>
+                <div class="step-desc">Our AI engine scans for factual claims, checks sources, and calculates a confidence score.</div>
+            </div>
+            <div class="step-card">
+                <div class="step-number">3</div>
+                <div class="step-icon">✅</div>
+                <div class="step-title">Get Your Verdict</div>
+                <div class="step-desc">Receive a clear credibility label — True, False, Mixed, or Unverified — with a full explanation.</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features-section">
+        <div class="section-label">Features</div>
+        <h2 class="section-title">Everything you need to verify</h2>
+        <p class="section-subtitle">Built specifically for students who need reliable, fast fact-checking for research and academics.</p>
+
+        <div class="features-grid reveal">
+            <div class="feature-card">
+                <div class="feature-icon-wrap">🔗</div>
+                <div>
+                    <div class="feature-title">URL & Text Input</div>
+                    <div class="feature-desc">Paste a news article link or type/paste any text claim directly for instant analysis.</div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">📊</div>
+                <div>
+                    <div class="feature-title">Confidence Score</div>
+                    <div class="feature-desc">Each result includes a real AI-calculated confidence percentage so you know how certain the verdict is.</div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">📚</div>
+                <div>
+                    <div class="feature-title">Source References</div>
+                    <div class="feature-desc">Supporting and contradicting sources are listed so you can verify further on your own.</div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">🕓</div>
+                <div>
+                    <div class="feature-title">Verification History</div>
+                    <div class="feature-desc">Sign in with your GC email to save and revisit all your past verifications anytime.</div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">🔒</div>
+                <div>
+                    <div class="feature-title">GC Students Only</div>
+                    <div class="feature-desc">Secured with Google login restricted to @gordoncollege.edu.ph accounts.</div>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-wrap">👤</div>
+                <div>
+                    <div class="feature-title">Guest Access</div>
+                    <div class="feature-desc">No account? No problem. Use the app as a guest — history just won't be saved.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+        <h2 class="cta-title">Ready to stop misinformation?</h2>
+        <p class="cta-subtitle">Join your fellow GC students in verifying facts before sharing.</p>
+        <a href="login.html" class="btn-cta">Get Started Free</a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <p>© 2026 <span>Validata GC</span> — Built for Gordon College Students</p>
+    </footer>
+
+    <script>
+        // Smooth scroll for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const target = document.querySelector(a.getAttribute('href'));
+                if (target) target.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // Scroll reveal
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.classList.add('visible');
+                    observer.unobserve(e.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    </script>
+</body>
+</html>

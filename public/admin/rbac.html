@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC Admin — Access Control</title>
+    <link rel="stylesheet" href="../css/admin-style.css">
+    <style>
+        .role-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);padding:0 1.5rem;}
+        .role-tab{
+            padding:0.875rem 1.25rem;font-size:0.875rem;font-weight:600;
+            color:var(--text-muted);cursor:pointer;border:none;background:none;
+            border-bottom:2px solid transparent;margin-bottom:-1px;
+            transition:all var(--ease);font-family:var(--font-display);
+            display:flex;align-items:center;gap:0.5rem;
+        }
+        .role-tab:hover{color:var(--text-secondary);}
+        .role-tab.active{color:var(--text-accent);border-bottom-color:var(--accent);}
+        .role-tab-count{
+            background:var(--accent-dim);color:var(--text-accent);
+            font-family:var(--font-mono);font-size:0.65rem;
+            padding:0.1rem 0.45rem;border-radius:9999px;
+        }
+        .user-row-avatar{
+            width:1.85rem;height:1.85rem;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;
+            font-size:0.75rem;font-weight:700;flex-shrink:0;
+        }
+    </style>
+</head>
+<body>
+<header class="admin-topbar">
+    <a href="dashboard.html" class="topbar-brand">
+        <div class="topbar-brand-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <span class="topbar-brand-name">VALIDATA GC</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-page-title">System Administrator</span>
+    <div class="topbar-right">
+        <div class="topbar-user-info"><div class="topbar-user-name" data-admin-name>Loading…</div><div class="topbar-user-role" data-admin-role></div></div>
+        <div class="topbar-avatar" data-admin-avatar>A</div>
+        <button class="btn-signout" id="signOutBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+    </div>
+</header>
+
+<div class="admin-body">
+    <nav class="admin-sidebar">
+        <p class="sidebar-label">System</p>
+        <a href="dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Overview</a>
+        <a href="rbac.html" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>Access Control</a>
+        <a href="audit.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Audit Trail</a>
+        <a href="ai-config.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>AI Configuration</a>
+        <a href="backup.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Backup & Security</a>
+        <p class="sidebar-label" style="margin-top:1rem;">External</p>
+        <a href="../moderator/dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Moderator Portal</a>
+        <a href="../index.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Student App</a>
+    </nav>
+
+    <main class="admin-main" style="padding:0;display:flex;flex-direction:column;">
+        <div class="page-header">
+            <div class="page-header-row">
+                <div><h1 class="page-title">Role-Based Access Control</h1><p class="page-sub">Manage permissions for students, moderators, and administrators</p></div>
+                <button class="admin-btn admin-btn-primary" id="addModBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add Moderator
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
+            <div class="stat-grid stat-grid-4" style="margin-bottom:0;">
+                <div class="stat-tile"><div class="stat-label">Total Users</div><div class="stat-value indigo" id="statTotal">–</div></div>
+                <div class="stat-tile"><div class="stat-label">Students</div><div class="stat-value blue" id="statStudents">–</div></div>
+                <div class="stat-tile"><div class="stat-label">Moderators</div><div class="stat-value green" id="statMods">–</div></div>
+                <div class="stat-tile"><div class="stat-label">Admins</div><div class="stat-value amber" id="statAdmins">–</div></div>
+            </div>
+        </div>
+
+        <!-- Role tabs -->
+        <div class="role-tabs">
+            <button class="role-tab active" data-tab="moderators">
+                Moderators <span class="role-tab-count" id="tabModCount">0</span>
+            </button>
+            <button class="role-tab" data-tab="admins">
+                Admins <span class="role-tab-count" id="tabAdminCount">0</span>
+            </button>
+            <button class="role-tab" data-tab="students">
+                Students <span class="role-tab-count" id="tabStudentCount">0</span>
+            </button>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input class="search-input" id="searchInput" placeholder="Search by name or email…">
+            </div>
+            <select class="filter-select" id="filterStatus">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-left:auto;" id="userCount">0 users</span>
+        </div>
+
+        <!-- Table -->
+        <div style="flex:1;overflow-y:auto;">
+            <table class="admin-table" id="userTable">
+                <thead>
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Last Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="userTableBody">
+                    <tr><td colspan="5" style="padding:2rem;"><div class="skeleton" style="height:14px;width:60%;"></div></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- Add Moderator Modal -->
+<div class="modal-overlay" id="addModModal">
+    <div class="modal-box">
+        <h2 class="modal-title">Add Moderator Account</h2>
+        <p class="modal-sub">Creates a Firebase Auth account and registers them as a moderator.</p>
+        <div class="admin-form-field"><label class="admin-form-label">Full Name</label><input class="admin-input" id="modName" type="text" placeholder="e.g. Maria Reyes"></div>
+        <div class="admin-form-field"><label class="admin-form-label">Email Address</label><input class="admin-input" id="modEmail" type="email" placeholder="moderator@gordoncollege.edu.ph"></div>
+        <div class="admin-form-field"><label class="admin-form-label">Temporary Password</label><input class="admin-input" id="modPassword" type="password" placeholder="Min. 8 characters"></div>
+        <div id="modError" style="display:none;padding:0.7rem;background:var(--red-dim);border:1px solid rgba(251,113,133,0.2);border-radius:var(--radius-sm);font-size:0.825rem;color:var(--red);margin-bottom:0.5rem;"></div>
+        <div class="modal-footer">
+            <button class="admin-btn admin-btn-ghost" id="cancelModBtn">Cancel</button>
+            <button class="admin-btn admin-btn-primary" id="confirmModBtn">Create Account</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm deactivate -->
+<div id="confirmModal" style="display:none;" class="confirm-overlay">
+    <div class="confirm-box" style="border:1px solid rgba(251,113,133,0.3);">
+        <div class="confirm-icon" style="background:var(--red-dim);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.4rem;" id="confirmTitle">Deactivate Account?</h3>
+        <p style="font-size:0.825rem;color:var(--text-muted);margin-bottom:1.5rem;line-height:1.6;" id="confirmMsg">This user will lose access immediately.</p>
+        <div style="display:flex;gap:0.75rem;">
+            <button class="admin-btn admin-btn-ghost" style="flex:1;justify-content:center;" id="cancelConfirmBtn">Cancel</button>
+            <button class="admin-btn admin-btn-danger" style="flex:1;justify-content:center;" id="okConfirmBtn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script type="module">
+    import { requireAdmin }                                          from "../js/admin-auth.js";
+    import { adminSignOut, getAllUsers, createModerator,
+             updateUserStatus, logAdminActivity }                    from "../js/admin-firebase.js";
+
+    function toast(msg, type="success") {
+        const el = document.createElement("div");
+        el.className = `toast toast-${type}`;
+        el.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${type==="success"?'<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>':`<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`}</svg><span>${msg}</span>`;
+        document.getElementById("toastContainer").appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    function formatDate(ts) {
+        if (!ts) return "Never";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleDateString("en-PH", { month:"short", day:"numeric", year:"numeric" });
+    }
+
+    let allUsers = { students:[], moderators:[], admins:[] };
+    let activeTab = "moderators";
+    let modProfile = null;
+    let confirmAction = null;
+
+    function currentList() {
+        const q   = document.getElementById("searchInput").value.toLowerCase();
+        const st  = document.getElementById("filterStatus").value;
+        let list  = allUsers[activeTab] || [];
+        if (q)  list = list.filter(u => u.email?.toLowerCase().includes(q) || u.name?.toLowerCase().includes(q));
+        if (st !== "all") list = list.filter(u => (u.status || "active") === st);
+        return list;
+    }
+
+    function renderTable() {
+        const list  = currentList();
+        const tbody = document.getElementById("userTableBody");
+        document.getElementById("userCount").textContent = `${list.length} user${list.length!==1?"s":""}`;
+
+        if (list.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>No users found.</p></div></td></tr>`;
+            return;
+        }
+
+        const ROLE_COLORS = { admin:"var(--text-accent)", moderator:"var(--green)", student:"var(--blue)" };
+
+        tbody.innerHTML = list.map(u => {
+            const status  = u.status || "active";
+            const initial = (u.name || u.email || "U")[0].toUpperCase();
+            const color   = ROLE_COLORS[u.role] || "var(--text-muted)";
+            const isActive = status === "active";
+
+            const actionBtns = activeTab !== "students" ? `
+                <div style="display:flex;gap:0.5rem;">
+                    <button class="admin-btn ${isActive?"admin-btn-danger":"admin-btn-success"}"
+                            style="font-size:0.75rem;padding:0.3rem 0.65rem;"
+                            onclick="toggleStatus('${u.uid}','${activeTab==="moderators"?"moderators":"admins"}','${isActive?"inactive":"active"}','${u.email}')">
+                        ${isActive ? "Deactivate" : "Activate"}
+                    </button>
+                </div>` : `<span style="font-size:0.78rem;color:var(--text-muted);">Read-only</span>`;
+
+            return `
+            <tr>
+                <td>
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div class="user-row-avatar" style="background:${color}18;color:${color};border:1px solid ${color}30;">${initial}</div>
+                        <div>
+                            <div style="font-size:0.875rem;font-weight:600;color:var(--text-primary);">${u.name || "—"}</div>
+                            <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">${u.email}</div>
+                        </div>
+                    </div>
+                </td>
+                <td><span class="badge ${u.role==="admin"?"badge-indigo":u.role==="moderator"?"badge-green":"badge-blue"}">${u.role}</span></td>
+                <td><span class="badge ${isActive?"badge-green":"badge-red"}">${status}</span></td>
+                <td style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);">${formatDate(u.lastActive || u.createdAt)}</td>
+                <td>${actionBtns}</td>
+            </tr>`;
+        }).join("");
+    }
+
+    function updateCounts() {
+        document.getElementById("statTotal").textContent    = allUsers.students.length + allUsers.moderators.length + allUsers.admins.length;
+        document.getElementById("statStudents").textContent = allUsers.students.length;
+        document.getElementById("statMods").textContent     = allUsers.moderators.length;
+        document.getElementById("statAdmins").textContent   = allUsers.admins.length;
+        document.getElementById("tabModCount").textContent     = allUsers.moderators.length;
+        document.getElementById("tabAdminCount").textContent   = allUsers.admins.length;
+        document.getElementById("tabStudentCount").textContent = allUsers.students.length;
+    }
+
+    // Tabs
+    document.querySelectorAll(".role-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".role-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            activeTab = btn.dataset.tab;
+            renderTable();
+        });
+    });
+
+    // Filters
+    ["searchInput","filterStatus"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderTable);
+        document.getElementById(id).addEventListener("change", renderTable);
+    });
+
+    // Toggle status
+    window.toggleStatus = function(uid, col, newStatus, email) {
+        confirmAction = async () => {
+            const result = await updateUserStatus(col, uid, newStatus);
+            if (result.error) { toast(result.error, "error"); return; }
+            const u = [...allUsers.moderators,...allUsers.admins].find(x => x.uid === uid);
+            if (u) u.status = newStatus;
+            renderTable();
+            await logAdminActivity(modProfile.uid, "user_status_changed", { uid, newStatus, email });
+            toast(`Account ${newStatus === "active" ? "activated" : "deactivated"}.`);
+        };
+        document.getElementById("confirmTitle").textContent = newStatus === "inactive" ? "Deactivate Account?" : "Activate Account?";
+        document.getElementById("confirmMsg").textContent   = `${email} will ${newStatus==="inactive"?"lose":"regain"} access immediately.`;
+        document.getElementById("confirmModal").style.display = "flex";
+    };
+
+    document.getElementById("cancelConfirmBtn").addEventListener("click", () => {
+        document.getElementById("confirmModal").style.display = "none"; confirmAction = null;
+    });
+    document.getElementById("okConfirmBtn").addEventListener("click", async () => {
+        document.getElementById("confirmModal").style.display = "none";
+        if (confirmAction) { await confirmAction(); confirmAction = null; }
+    });
+
+    // Add moderator modal
+    const addModal = document.getElementById("addModModal");
+    document.getElementById("addModBtn").addEventListener("click", () => {
+        document.getElementById("modName").value = "";
+        document.getElementById("modEmail").value = "";
+        document.getElementById("modPassword").value = "";
+        document.getElementById("modError").style.display = "none";
+        addModal.classList.add("open");
+    });
+    document.getElementById("cancelModBtn").addEventListener("click", () => addModal.classList.remove("open"));
+    addModal.addEventListener("click", e => { if (e.target === addModal) addModal.classList.remove("open"); });
+
+    document.getElementById("confirmModBtn").addEventListener("click", async () => {
+        const name     = document.getElementById("modName").value.trim();
+        const email    = document.getElementById("modEmail").value.trim();
+        const password = document.getElementById("modPassword").value;
+        const errEl    = document.getElementById("modError");
+        errEl.style.display = "none";
+
+        if (!name)     { errEl.textContent = "Name is required."; errEl.style.display="block"; return; }
+        if (!email)    { errEl.textContent = "Email is required."; errEl.style.display="block"; return; }
+        if (password.length < 8) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display="block"; return; }
+
+        const btn = document.getElementById("confirmModBtn");
+        btn.disabled = true; btn.textContent = "Creating…";
+
+        const result = await createModerator(email, password, name);
+        btn.disabled = false; btn.textContent = "Create Account";
+
+        if (result.error) { errEl.textContent = result.error; errEl.style.display="block"; return; }
+
+        allUsers.moderators.push({ uid: result.uid, name, email, role:"moderator", status:"active" });
+        updateCounts(); renderTable();
+        addModal.classList.remove("open");
+        await logAdminActivity(modProfile.uid, "moderator_created", { email, name });
+        toast(`Moderator account created for ${name}.`);
+    });
+
+    document.getElementById("signOutBtn").addEventListener("click", () => adminSignOut());
+
+    requireAdmin(async (profile) => {
+        modProfile = profile;
+        allUsers = await getAllUsers();
+        updateCounts();
+        renderTable();
+    });
+</script>
+</body>
+</html>

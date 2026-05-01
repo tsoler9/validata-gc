@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC - Result</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">VALIDATA GC</a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="tips.html" class="nav-link">Tips</a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="page-container">
+        <h1 class="page-title">Verification Result</h1>
+        
+        <div class="card">
+            <div class="result-score">
+                <div class="score-display"></div>
+                <div class="status-badge"></div>
+            </div>
+        
+            <div>
+                <p><strong>Credibility Label:</strong></p>
+                <p id="credibilityText"></p>
+            </div>
+
+            <div>
+                <p><strong>Factual Claims Identified:</strong></p>
+                <p id="claimsText"></p>
+            </div>
+                
+            <div class="result-explanation">
+                <h2>Explanation</h2>
+            </div>
+
+            <div>
+                <p><strong>Supporting Sources:</strong></p>
+                <ul id="supportList"></ul>
+            </div>
+
+            <div>
+                <p><strong>Contradicting Sources:</strong></p>
+                <ul id="contradictList"></ul>
+            </div>
+
+            <div class="result-buttons">
+                <a href="tips.html" class="btn btn-secondary">Learn Tips</a>
+                <a href="input.html" class="btn btn-primary">Verify Again</a>
+            </div>
+        </div>
+    </main>
+
+<!-- Display script -->
+<script>
+const result = JSON.parse(localStorage.getItem("aiResult"));
+
+if (result) {
+    const confidence = result.confidence || 0;
+    document.querySelector(".score-display").innerText = confidence + "%";
+
+    const badge = document.querySelector(".status-badge");
+    badge.innerText = result.credibility || "Unverified";
+
+    const colors = {
+        "True":       { bg: "#d1fae5", color: "#065f46" },
+        "False":      { bg: "#fee2e2", color: "#991b1b" },
+        "Mixed":      { bg: "#ffedd5", color: "#9a3412" },
+        "Unverified": { bg: "#fef3c7", color: "#92400e" }
+    };
+    const c = colors[result.credibility] || colors["Unverified"];
+    badge.style.backgroundColor = c.bg;
+    badge.style.color = c.color;
+
+    document.getElementById("credibilityText").innerText = result.credibility || "N/A";
+    document.getElementById("claimsText").innerText = result.claims || "N/A";
+    document.querySelector(".result-explanation").innerHTML += `<p>${result.explanation || "No explanation."}</p>`;
+
+    (result.supportingSources || []).forEach(source => {
+        let li = document.createElement("li");
+        li.innerHTML = `<a href="${source}" target="_blank">${source}</a>`;
+        document.getElementById("supportList").appendChild(li);
+    });
+
+    (result.contradictingSources || []).forEach(source => {
+        let li = document.createElement("li");
+        li.innerHTML = `<a href="${source}" target="_blank">${source}</a>`;
+        document.getElementById("contradictList").appendChild(li);
+    });
+} else {
+    document.getElementById("credibilityText").innerText = "No result available.";
+}
+</script>
+
+<!-- Firebase script — only saves if NOT coming from history -->
+<script type="module">
+import { auth, saveHistory, initNav } from "../js/firebase.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-auth.js";
+
+initNav();
+
+const isFromHistory = localStorage.getItem("isFromHistory") === "true";
+
+onAuthStateChanged(auth, (user) => {
+    if (user && !isFromHistory) {
+        const aiResult = JSON.parse(localStorage.getItem("aiResult"));
+        const input = localStorage.getItem("inputData") || localStorage.getItem("inputUrl") || "";
+        if (aiResult) {
+            saveHistory(user, input, aiResult);
+            console.log("History saved for:", user.email);
+        }
+    } else if (isFromHistory) {
+        console.log("Viewing from history — not saving again.");
+    } else {
+        console.log("Guest — history not saved.");  // ✅ FIX: removed stray "/" that broke JS
+    }
+});
+</script>
+
+</body>
+</html>

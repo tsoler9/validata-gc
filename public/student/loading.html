@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC - Loading</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">VALIDATA GC</a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">Home</a>
+                <a href="tips.html" class="nav-link">Tips</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Loading Page -->
+    <main class="loading-container">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <div class="loading-text">
+                <h1>Verifying Content</h1>
+                <p>Analyzing information and checking sources...</p>
+            </div>
+            <div class="loading-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+            // Loading Page
+        setTimeout(function() {
+            window.location.href = 'result.html';
+        }, 3000);
+    </script>
+
+    <script src="../js/app.js"></script>
+
+<script>
+    window.addEventListener('DOMContentLoaded', function() {
+        runAI();
+    });
+</script>
+
+</body>
+</html>

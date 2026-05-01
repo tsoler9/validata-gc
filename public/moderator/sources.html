@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC Moderator — Source Verification</title>
+    <link rel="stylesheet" href="../css/mod-style.css">
+    <style>
+        /* ── Sources-specific styles ── */
+
+        /* Search + toolbar */
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .search-wrap {
+            position: relative;
+            flex: 1;
+            min-width: 14rem;
+        }
+
+        .search-wrap svg {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0.95rem;
+            height: 0.95rem;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.55rem 1rem 0.55rem 2.4rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.855rem;
+            outline: none;
+            transition: all var(--ease);
+        }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-input:focus {
+            border-color: var(--accent);
+            background: var(--bg-surface);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .filter-select {
+            padding: 0.5rem 0.75rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--ease);
+        }
+        .filter-select:focus { border-color: var(--accent); }
+
+        /* Source table rows */
+        .source-table-wrap {
+            overflow-x: auto;
+        }
+
+        .mod-table td.source-name {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .mod-table td.source-url {
+            font-family: var(--font-mono);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+        }
+
+        .trust-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .trust-bar-track {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-hover);
+            border-radius: 9999px;
+            overflow: hidden;
+            min-width: 4rem;
+        }
+
+        .trust-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .trust-score {
+            font-family: var(--font-mono);
+            font-size: 0.72rem;
+            min-width: 2.5rem;
+            text-align: right;
+        }
+
+        /* Toggle switch */
+        .toggle-switch {
+            position: relative;
+            width: 2.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+            position: absolute;
+        }
+
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: 9999px;
+            transition: all var(--ease);
+        }
+
+        .toggle-thumb {
+            position: absolute;
+            top: 0.2rem;
+            left: 0.2rem;
+            width: 0.8rem;
+            height: 0.8rem;
+            background: var(--text-muted);
+            border-radius: 50%;
+            transition: all var(--ease);
+        }
+
+        .toggle-switch input:checked ~ .toggle-track {
+            background: rgba(52,211,153,0.15);
+            border-color: rgba(52,211,153,0.4);
+        }
+
+        .toggle-switch input:checked ~ .toggle-thumb {
+            left: 1.2rem;
+            background: var(--green);
+        }
+
+        /* Add source modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            z-index: 200;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity var(--ease);
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            width: 100%;
+            max-width: 30rem;
+            box-shadow: var(--shadow-lg);
+            transform: translateY(10px) scale(0.98);
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .modal-overlay.open .modal-box {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+
+        .modal-sub {
+            font-size: 0.825rem;
+            color: var(--text-muted);
+            margin-bottom: 1.75rem;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 1.75rem;
+        }
+
+        .modal-footer .mod-btn { flex: 1; padding: 0.7rem; justify-content: center; }
+
+        /* Form inside modal */
+        .form-field { margin-bottom: 1.1rem; }
+
+        .form-label {
+            display: block;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            font-weight: 500;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            margin-bottom: 0.45rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.855rem;
+            outline: none;
+            transition: all var(--ease);
+        }
+        .form-input::placeholder { color: var(--text-muted); }
+        .form-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .form-select {
+            width: 100%;
+            padding: 0.7rem 0.9rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 0.855rem;
+            outline: none;
+            cursor: pointer;
+            transition: all var(--ease);
+        }
+        .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-glow); }
+
+        /* Trust score slider */
+        .trust-slider {
+            width: 100%;
+            accent-color: var(--accent);
+            margin-top: 0.5rem;
+        }
+
+        .trust-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Empty state */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+            gap: 0.75rem;
+            text-align: center;
+        }
+
+        .empty-state svg { width: 2.5rem; height: 2.5rem; opacity: 0.2; }
+        .empty-state p   { font-size: 0.875rem; }
+
+        /* Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: var(--radius-sm);
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-size: 0.855rem; font-weight: 500;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-lg);
+            z-index: 999;
+            display: flex; align-items: center; gap: 0.6rem;
+            border: 1px solid transparent;
+            animation: toastIn 0.25s ease both;
+        }
+        .toast-success { background: var(--bg-card); border-color: rgba(52,211,153,0.3); }
+        .toast-success svg { color: var(--green); }
+        .toast-error   { background: var(--bg-card); border-color: rgba(248,113,113,0.3); }
+        .toast-error svg { color: var(--red); }
+        @keyframes toastIn {
+            from { opacity:0; transform: translateY(8px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        /* Delete confirm button */
+        .btn-delete {
+            background: none; border: none;
+            color: var(--text-muted);
+            cursor: pointer; padding: 0.25rem;
+            border-radius: var(--radius-sm);
+            transition: all var(--ease);
+            display: flex; align-items: center;
+        }
+        .btn-delete:hover { color: var(--red); background: var(--red-dim); }
+        .btn-delete svg { width: 0.9rem; height: 0.9rem; }
+
+        /* Category color dots */
+        .cat-dot {
+            width: 0.45rem; height: 0.45rem;
+            border-radius: 50%; display: inline-block;
+            margin-right: 0.4rem; vertical-align: middle;
+        }
+
+        /* Stats row */
+        .sources-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .source-stat-tile {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1rem 1.25rem;
+        }
+
+        .source-stat-label {
+            font-family: var(--font-mono);
+            font-size: 0.68rem; font-weight: 500;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 0.5rem;
+        }
+
+        .source-stat-value {
+            font-family: var(--font-display);
+            font-size: 1.85rem; font-weight: 800;
+            line-height: 1; letter-spacing: -0.03em;
+        }
+
+        /* Confirm delete modal */
+        .confirm-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            z-index: 300;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .confirm-box {
+            background: var(--bg-card);
+            border: 1px solid rgba(248,113,113,0.3);
+            border-radius: var(--radius-xl);
+            padding: 1.75rem 2rem;
+            max-width: 22rem; width: 100%;
+            text-align: center;
+        }
+
+        .confirm-icon {
+            width: 3rem; height: 3rem;
+            background: var(--red-dim);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .confirm-icon svg { width: 1.25rem; height: 1.25rem; color: var(--red); }
+    </style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<header class="mod-topbar">
+    <a href="dashboard.html" class="topbar-brand">
+        <div class="topbar-brand-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+        </div>
+        <span class="topbar-brand-name">VALIDATA GC</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-page-title">Moderator Portal</span>
+    <div class="topbar-right">
+        <div class="topbar-user-info">
+            <div class="topbar-user-name" data-mod-name>Loading…</div>
+            <div class="topbar-user-role"  data-mod-role></div>
+        </div>
+        <div class="topbar-avatar" data-mod-avatar>M</div>
+        <button class="btn-signout" id="signOutBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign Out
+        </button>
+    </div>
+</header>
+
+<!-- ══ BODY ══ -->
+<div class="mod-body">
+
+    <!-- Sidebar -->
+    <nav class="mod-sidebar">
+        <p class="sidebar-section-label">Moderation</p>
+
+        <a href="dashboard.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Claim Moderation
+        </a>
+
+        <a href="sources.html" class="sidebar-link active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Source Verification
+        </a>
+
+        <a href="tags.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Misinfo Tagging
+        </a>
+
+        <a href="quality.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Quality Control
+        </a>
+
+        <p class="sidebar-section-label" style="margin-top:1rem;">Account</p>
+        <a href="../index.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Student App
+        </a>
+    </nav>
+
+    <!-- Main -->
+    <main class="mod-main" style="padding:0; display:flex; flex-direction:column; min-width:0;">
+
+        <!-- Page header -->
+        <div style="padding: 1.75rem 2rem 1.25rem; border-bottom: 1px solid var(--border);">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                <div>
+                    <h1 class="mod-page-title">Source Verification Management</h1>
+                    <p class="mod-page-sub">Maintain the curated database of trusted sources used to validate AI outputs</p>
+                </div>
+                <button class="mod-btn mod-btn-primary" id="addSourceBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                         stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    Add Source
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="sources-stats">
+            <div class="source-stat-tile">
+                <div class="source-stat-label">Total Sources</div>
+                <div class="source-stat-value blue"  id="statTotal">–</div>
+            </div>
+            <div class="source-stat-tile">
+                <div class="source-stat-label">Active</div>
+                <div class="source-stat-value green" id="statActive">–</div>
+            </div>
+            <div class="source-stat-tile">
+                <div class="source-stat-label">Inactive</div>
+                <div class="source-stat-value amber" id="statInactive">–</div>
+            </div>
+            <div class="source-stat-tile">
+                <div class="source-stat-label">Avg. Trust Score</div>
+                <div class="source-stat-value blue"  id="statAvgTrust">–</div>
+            </div>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input class="search-input" id="searchInput"
+                       placeholder="Search by name, URL, or category…" type="text">
+            </div>
+            <select class="filter-select" id="filterCategory">
+                <option value="all">All Categories</option>
+                <option value="Government">Government</option>
+                <option value="Academic">Academic</option>
+                <option value="News">News</option>
+                <option value="Health">Health</option>
+                <option value="Science">Science</option>
+                <option value="Other">Other</option>
+            </select>
+            <select class="filter-select" id="filterStatus">
+                <option value="all">All Status</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+            </select>
+            <span style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted); margin-left:auto;"
+                  id="sourceCount">0 sources</span>
+        </div>
+
+        <!-- Table -->
+        <div class="source-table-wrap" style="flex:1; overflow-y:auto;">
+            <table class="mod-table" id="sourcesTable">
+                <thead>
+                    <tr>
+                        <th>Source Name</th>
+                        <th>URL</th>
+                        <th>Category</th>
+                        <th>Trust Score</th>
+                        <th>Added By</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="sourcesBody">
+                    <tr>
+                        <td colspan="7" style="padding:2rem;">
+                            <div style="display:flex; flex-direction:column; gap:0.75rem;">
+                                <div class="skeleton" style="height:14px; width:60%;"></div>
+                                <div class="skeleton" style="height:14px; width:45%;"></div>
+                                <div class="skeleton" style="height:14px; width:70%;"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </main>
+</div>
+
+<!-- ══ ADD SOURCE MODAL ══ -->
+<div class="modal-overlay" id="addModal">
+    <div class="modal-box">
+        <h2 class="modal-title">Add Trusted Source</h2>
+        <p class="modal-sub">New sources are immediately available for AI output verification.</p>
+
+        <div class="form-field">
+            <label class="form-label" for="srcName">Source Name</label>
+            <input class="form-input" id="srcName" type="text"
+                   placeholder="e.g. Philippine Statistics Authority">
+        </div>
+
+        <div class="form-field">
+            <label class="form-label" for="srcUrl">URL / Domain</label>
+            <input class="form-input" id="srcUrl" type="text"
+                   placeholder="e.g. psa.gov.ph">
+        </div>
+
+        <div class="form-field">
+            <label class="form-label" for="srcCategory">Category</label>
+            <select class="form-select" id="srcCategory">
+                <option value="Government">Government</option>
+                <option value="Academic">Academic</option>
+                <option value="News">News</option>
+                <option value="Health">Health</option>
+                <option value="Science">Science</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+
+        <div class="form-field">
+            <label class="form-label">Trust Score: <span id="trustScoreDisplay">80</span>/100</label>
+            <input class="trust-slider" id="srcTrust" type="range" min="0" max="100" value="80">
+            <div class="trust-slider-labels">
+                <span>0 — Untrusted</span>
+                <span>50 — Moderate</span>
+                <span>100 — Fully Trusted</span>
+            </div>
+        </div>
+
+        <div id="modalError" style="display:none; padding:0.7rem 0.875rem;
+             background:var(--red-dim); border:1px solid rgba(248,113,113,0.2);
+             border-radius:var(--radius-sm); font-size:0.825rem; color:var(--red);
+             margin-bottom:0.5rem;"></div>
+
+        <div class="modal-footer">
+            <button class="mod-btn mod-btn-ghost" id="cancelAddBtn">Cancel</button>
+            <button class="mod-btn mod-btn-primary" id="confirmAddBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add to Database
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══ DELETE CONFIRM MODAL ══ -->
+<div id="deleteModal" style="display:none;" class="confirm-overlay">
+    <div class="confirm-box">
+        <div class="confirm-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6"/><path d="M14 11v6"/>
+                <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            </svg>
+        </div>
+        <h3 style="font-family:var(--font-display); font-size:1rem; font-weight:700;
+                   color:var(--text-primary); margin-bottom:0.4rem;">Remove Source?</h3>
+        <p style="font-size:0.825rem; color:var(--text-muted); margin-bottom:1.5rem; line-height:1.6;">
+            "<span id="deleteSourceName"></span>" will be permanently removed from the trusted sources database.
+        </p>
+        <div style="display:flex; gap:0.75rem;">
+            <button class="mod-btn mod-btn-ghost" style="flex:1; justify-content:center;"
+                    id="cancelDeleteBtn">Cancel</button>
+            <button class="mod-btn mod-btn-reject" style="flex:1; justify-content:center;"
+                    id="confirmDeleteBtn">Remove</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer"></div>
+
+<script type="module">
+    import { requireMod }                                       from "../js/mod-auth.js";
+    import { modSignOut, getSources, addSource,
+             toggleSource, deleteSource, logActivity }          from "../js/mod-firebase.js";
+
+    // ── Helpers ──────────────────────────────────────────
+
+    const CAT_COLORS = {
+        Government: "#60a5fa",
+        Academic:   "#a78bfa",
+        News:       "#34d399",
+        Health:     "#f87171",
+        Science:    "#fbbf24",
+        Other:      "#94a3b8"
+    };
+
+    function trustColor(score) {
+        if (score >= 85) return "var(--green)";
+        if (score >= 60) return "var(--amber)";
+        return "var(--red)";
+    }
+
+    function toast(msg, type = "success") {
+        const el = document.createElement("div");
+        el.className = `toast toast-${type}`;
+        el.innerHTML = `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                ${type === "success"
+                    ? '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+                    : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+            </svg>
+            <span>${msg}</span>`;
+        document.getElementById("toastContainer").appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    // ── State ─────────────────────────────────────────────
+    let allSources  = [];
+    let modProfile  = null;
+    let deleteTarget = null;
+
+    // ── Render ────────────────────────────────────────────
+    function filtered() {
+        const q    = document.getElementById("searchInput").value.toLowerCase();
+        const cat  = document.getElementById("filterCategory").value;
+        const stat = document.getElementById("filterStatus").value;
+
+        return allSources.filter(s => {
+            const matchQ    = !q || s.name?.toLowerCase().includes(q)
+                                 || s.url?.toLowerCase().includes(q)
+                                 || s.category?.toLowerCase().includes(q);
+            const matchCat  = cat  === "all" || s.category === cat;
+            const matchStat = stat === "all"
+                || (stat === "active"   &&  s.active)
+                || (stat === "inactive" && !s.active);
+            return matchQ && matchCat && matchStat;
+        });
+    }
+
+    function renderTable() {
+        const sources  = filtered();
+        const tbody    = document.getElementById("sourcesBody");
+        const countEl  = document.getElementById("sourceCount");
+
+        countEl.textContent = `${sources.length} source${sources.length !== 1 ? "s" : ""}`;
+        updateStats();
+
+        if (sources.length === 0) {
+            tbody.innerHTML = `
+                <tr><td colspan="7">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        <p>No sources found. Add one using the button above.</p>
+                    </div>
+                </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = sources.map(s => {
+            const color      = CAT_COLORS[s.category] || CAT_COLORS.Other;
+            const trust      = s.trustScore ?? 80;
+            const tColor     = trustColor(trust);
+            const isActive   = s.active !== false;
+
+            return `
+            <tr>
+                <td class="source-name">
+                    <div style="display:flex; align-items:center; gap:0.5rem;">
+                        <span class="cat-dot" style="background:${color};"></span>
+                        ${s.name || "—"}
+                    </div>
+                </td>
+                <td class="source-url">
+                    <a href="https://${s.url}" target="_blank" rel="noopener"
+                       style="color:var(--text-muted); text-decoration:none; transition:color var(--ease);"
+                       onmouseover="this.style.color='var(--text-accent)'"
+                       onmouseout="this.style.color='var(--text-muted)'">
+                        ${s.url || "—"}
+                    </a>
+                </td>
+                <td>
+                    <span class="badge" style="
+                        background:${color}18;
+                        color:${color};
+                        border-color:${color}30;">
+                        ${s.category || "Other"}
+                    </span>
+                </td>
+                <td>
+                    <div class="trust-bar-wrap">
+                        <div class="trust-bar-track">
+                            <div class="trust-bar-fill"
+                                 style="width:${trust}%; background:${tColor};"></div>
+                        </div>
+                        <span class="trust-score" style="color:${tColor};">${trust}</span>
+                    </div>
+                </td>
+                <td style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-muted);">
+                    ${s.addedByEmail || "System"}
+                </td>
+                <td>
+                    <label class="toggle-switch" title="${isActive ? "Click to deactivate" : "Click to activate"}">
+                        <input type="checkbox" ${isActive ? "checked" : ""}
+                               onchange="handleToggle('${s.id}', this.checked)">
+                        <div class="toggle-track"></div>
+                        <div class="toggle-thumb"></div>
+                    </label>
+                </td>
+                <td>
+                    <button class="btn-delete" title="Remove source"
+                            onclick="confirmDelete('${s.id}', '${(s.name || "").replace(/'/g,"\\'")}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                            <path d="M10 11v6"/><path d="M14 11v6"/>
+                            <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+                        </svg>
+                    </button>
+                </td>
+            </tr>`;
+        }).join("");
+    }
+
+    function updateStats() {
+        const active   = allSources.filter(s => s.active !== false).length;
+        const inactive = allSources.length - active;
+        const avg      = allSources.length
+            ? Math.round(allSources.reduce((a, s) => a + (s.trustScore ?? 80), 0) / allSources.length)
+            : 0;
+
+        document.getElementById("statTotal").textContent   = allSources.length;
+        document.getElementById("statActive").textContent  = active;
+        document.getElementById("statInactive").textContent = inactive;
+        document.getElementById("statAvgTrust").textContent = avg + "%";
+    }
+
+    // ── Toggle active ─────────────────────────────────────
+    window.handleToggle = async function(id, active) {
+        const idx = allSources.findIndex(s => s.id === id);
+        if (idx !== -1) allSources[idx].active = active;
+        updateStats();
+
+        const result = await toggleSource(id, active);
+        if (result.error) {
+            toast("Failed to update source.", "error");
+            if (idx !== -1) allSources[idx].active = !active;
+            renderTable();
+            return;
+        }
+
+        await logActivity(modProfile.uid, "source_toggled",
+            { sourceId: id, active });
+        toast(`Source ${active ? "activated" : "deactivated"}.`);
+    };
+
+    // ── Delete flow ───────────────────────────────────────
+    window.confirmDelete = function(id, name) {
+        deleteTarget = id;
+        document.getElementById("deleteSourceName").textContent = name;
+        document.getElementById("deleteModal").style.display = "flex";
+    };
+
+    document.getElementById("cancelDeleteBtn").addEventListener("click", () => {
+        deleteTarget = null;
+        document.getElementById("deleteModal").style.display = "none";
+    });
+
+    document.getElementById("confirmDeleteBtn").addEventListener("click", async () => {
+        if (!deleteTarget) return;
+
+        document.getElementById("deleteModal").style.display = "none";
+        const id = deleteTarget;
+        deleteTarget = null;
+
+        allSources = allSources.filter(s => s.id !== id);
+        renderTable();
+
+        const result = await deleteSource(id);
+        if (result.error) {
+            toast("Failed to delete source.", "error");
+            allSources = await getSources();
+            renderTable();
+            return;
+        }
+
+        await logActivity(modProfile.uid, "source_deleted", { sourceId: id });
+        toast("Source removed from database.");
+    });
+
+    // ── Add source modal ──────────────────────────────────
+    const addModal = document.getElementById("addModal");
+
+    document.getElementById("addSourceBtn").addEventListener("click", () => {
+        // Reset form
+        document.getElementById("srcName").value     = "";
+        document.getElementById("srcUrl").value      = "";
+        document.getElementById("srcCategory").value = "Government";
+        document.getElementById("srcTrust").value    = "80";
+        document.getElementById("trustScoreDisplay").textContent = "80";
+        document.getElementById("modalError").style.display = "none";
+        addModal.classList.add("open");
+        setTimeout(() => document.getElementById("srcName").focus(), 100);
+    });
+
+    document.getElementById("cancelAddBtn").addEventListener("click", () => {
+        addModal.classList.remove("open");
+    });
+
+    addModal.addEventListener("click", e => {
+        if (e.target === addModal) addModal.classList.remove("open");
+    });
+
+    // Live trust score label
+    document.getElementById("srcTrust").addEventListener("input", function() {
+        document.getElementById("trustScoreDisplay").textContent = this.value;
+    });
+
+    document.getElementById("confirmAddBtn").addEventListener("click", async () => {
+        const name     = document.getElementById("srcName").value.trim();
+        const url      = document.getElementById("srcUrl").value.trim();
+        const category = document.getElementById("srcCategory").value;
+        const trust    = parseInt(document.getElementById("srcTrust").value);
+        const errEl    = document.getElementById("modalError");
+
+        errEl.style.display = "none";
+
+        if (!name) { errEl.textContent = "Source name is required."; errEl.style.display = "block"; return; }
+        if (!url)  { errEl.textContent = "URL is required.";         errEl.style.display = "block"; return; }
+
+        const btn = document.getElementById("confirmAddBtn");
+        btn.disabled = true;
+        btn.textContent = "Adding…";
+
+        const result = await addSource(
+            { name, url, category, trustScore: trust, addedByEmail: modProfile.email },
+            modProfile.uid
+        );
+
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round">
+                             <line x1="12" y1="5" x2="12" y2="19"/>
+                             <line x1="5" y1="12" x2="19" y2="12"/>
+                         </svg> Add to Database`;
+
+        if (result.error) {
+            errEl.textContent = "Failed to add source: " + result.error;
+            errEl.style.display = "block";
+            return;
+        }
+
+        // Optimistically add to list
+        allSources.unshift({
+            id: result.id, name, url, category,
+            trustScore: trust, active: true,
+            addedByEmail: modProfile.email
+        });
+
+        renderTable();
+        addModal.classList.remove("open");
+
+        await logActivity(modProfile.uid, "source_added", { name, url, category });
+        toast(`"${name}" added to trusted sources.`);
+    });
+
+    // ── Filter listeners ──────────────────────────────────
+    ["searchInput","filterCategory","filterStatus"].forEach(id => {
+        document.getElementById(id).addEventListener("input", renderTable);
+        document.getElementById(id).addEventListener("change", renderTable);
+    });
+
+    // ── Sign out ──────────────────────────────────────────
+    document.getElementById("signOutBtn").addEventListener("click", () => modSignOut());
+
+    // ── Init ──────────────────────────────────────────────
+    requireMod(async (profile) => {
+        modProfile = profile;
+        allSources = await getSources();
+        renderTable();
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC Moderator — Quality Control</title>
+    <link rel="stylesheet" href="../css/mod-style.css">
+    <style>
+        /* ── Layout ── */
+        .qc-layout {
+            display: grid;
+            grid-template-columns: 1fr 22rem;
+            gap: 0;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .qc-left  { overflow-y: auto; border-right: 1px solid var(--border); }
+        .qc-right { overflow-y: auto; background: var(--bg-surface); }
+
+        /* ── Checklist panel ── */
+        .checklist-wrap { padding: 1.5rem; }
+
+        .checklist-section-title {
+            font-family: var(--font-display);
+            font-size: 0.9rem; font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+
+        .checklist-section-title svg {
+            width: 1rem; height: 1rem; color: var(--accent);
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.875rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            margin-bottom: 0.625rem;
+            transition: all var(--ease);
+            cursor: pointer;
+        }
+        .checklist-item:hover { border-color: var(--border-light); background: var(--bg-hover); }
+        .checklist-item.passed { border-color: rgba(52,211,153,0.2); }
+        .checklist-item.failed { border-color: rgba(248,113,113,0.2); }
+
+        .check-circle {
+            width: 1.375rem; height: 1.375rem;
+            border-radius: 50%;
+            border: 1.5px solid var(--border-light);
+            flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: all var(--ease);
+            margin-top: 0.1rem;
+        }
+        .check-circle svg { width: 0.75rem; height: 0.75rem; display: none; }
+        .checklist-item.passed .check-circle {
+            background: var(--green-dim);
+            border-color: rgba(52,211,153,0.4);
+        }
+        .checklist-item.passed .check-circle svg { display: block; color: var(--green); }
+        .checklist-item.failed .check-circle {
+            background: var(--red-dim);
+            border-color: rgba(248,113,113,0.3);
+        }
+        .checklist-item.failed .check-circle svg { display: block; color: var(--red); }
+
+        .check-body h4 {
+            font-family: var(--font-display);
+            font-size: 0.875rem; font-weight: 700;
+            color: var(--text-primary); margin-bottom: 0.2rem;
+        }
+        .check-body p {
+            font-size: 0.8rem; color: var(--text-muted); line-height: 1.55;
+        }
+
+        .check-actions {
+            display: flex; gap: 0.5rem;
+            margin-left: auto; flex-shrink: 0; align-self: center;
+        }
+
+        .check-btn {
+            padding: 0.3rem 0.7rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.75rem; font-weight: 600;
+            cursor: pointer; border: 1px solid transparent;
+            transition: all var(--ease);
+            font-family: var(--font-body);
+        }
+        .check-btn-pass {
+            background: var(--green-dim);
+            color: var(--green);
+            border-color: rgba(52,211,153,0.3);
+        }
+        .check-btn-pass:hover { background: rgba(52,211,153,0.2); }
+        .check-btn-fail {
+            background: var(--red-dim);
+            color: var(--red);
+            border-color: rgba(248,113,113,0.25);
+        }
+        .check-btn-fail:hover { background: rgba(248,113,113,0.2); }
+        .check-btn-reset {
+            background: transparent;
+            color: var(--text-muted);
+            border-color: var(--border);
+        }
+        .check-btn-reset:hover { background: var(--bg-hover); color: var(--text-secondary); }
+
+        /* Score ring */
+        .score-ring-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.75rem 1.5rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .score-ring {
+            position: relative;
+            width: 8rem; height: 8rem;
+            margin-bottom: 1rem;
+        }
+
+        .score-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+
+        .score-ring-track { fill: none; stroke: var(--bg-hover); stroke-width: 8; }
+        .score-ring-fill  {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            stroke-dasharray: 226;
+            stroke-dashoffset: 226;
+            transition: stroke-dashoffset 1s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        stroke 0.3s ease;
+        }
+
+        .score-ring-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .score-ring-value {
+            font-family: var(--font-display);
+            font-size: 1.85rem; font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1; letter-spacing: -0.04em;
+        }
+
+        .score-ring-label {
+            font-family: var(--font-mono);
+            font-size: 0.65rem; color: var(--text-muted);
+            text-transform: uppercase; letter-spacing: 0.06em;
+        }
+
+        .overall-badge {
+            font-family: var(--font-display);
+            font-size: 0.85rem; font-weight: 700;
+            padding: 0.35rem 1rem;
+            border-radius: 9999px;
+        }
+
+        /* Right panel sections */
+        .qc-right-section {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .qc-right-title {
+            font-family: var(--font-mono);
+            font-size: 0.68rem; font-weight: 500;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 1rem;
+        }
+
+        /* Dimension bars */
+        .dimension-item {
+            margin-bottom: 0.875rem;
+        }
+
+        .dimension-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.3rem;
+        }
+
+        .dimension-name {
+            font-size: 0.825rem; font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .dimension-score {
+            font-family: var(--font-mono);
+            font-size: 0.75rem; color: var(--text-muted);
+        }
+
+        .dimension-bar-track {
+            height: 4px;
+            background: var(--bg-hover);
+            border-radius: 9999px; overflow: hidden;
+        }
+
+        .dimension-bar-fill {
+            height: 100%; border-radius: 9999px;
+            transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* Report textarea */
+        .report-textarea {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.855rem;
+            resize: vertical; min-height: 7rem;
+            outline: none; line-height: 1.65;
+            transition: all var(--ease);
+        }
+        .report-textarea::placeholder { color: var(--text-muted); }
+        .report-textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        /* Claim selector */
+        .claim-selector {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .claim-option {
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background var(--ease);
+            display: flex; align-items: center; gap: 0.875rem;
+        }
+        .claim-option:last-child { border-bottom: none; }
+        .claim-option:hover { background: var(--bg-hover); }
+        .claim-option.selected { background: var(--accent-dim); }
+
+        .claim-option-dot {
+            width: 0.5rem; height: 0.5rem;
+            border-radius: 50%; flex-shrink: 0;
+        }
+
+        .claim-option-text {
+            font-size: 0.855rem; color: var(--text-secondary);
+            font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            flex: 1;
+        }
+        .claim-option.selected .claim-option-text { color: var(--text-primary); }
+
+        /* Stats row */
+        .qc-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .qc-stat-tile {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1rem 1.25rem;
+        }
+        .qc-stat-label {
+            font-family: var(--font-mono);
+            font-size: 0.68rem; font-weight: 500;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            color: var(--text-muted); margin-bottom: 0.5rem;
+        }
+        .qc-stat-value {
+            font-family: var(--font-display);
+            font-size: 1.85rem; font-weight: 800;
+            line-height: 1; letter-spacing: -0.03em;
+        }
+
+        /* Log table */
+        .log-item {
+            display: flex;
+            align-items: center;
+            gap: 0.875rem;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .log-item:last-child { border-bottom: none; }
+
+        .log-dot {
+            width: 0.45rem; height: 0.45rem;
+            border-radius: 50%; flex-shrink: 0;
+        }
+
+        .log-text { flex: 1; font-size: 0.825rem; color: var(--text-secondary); }
+        .log-time { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 1.5rem; right: 1.5rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-size: 0.855rem; font-weight: 500;
+            color: var(--text-primary); box-shadow: var(--shadow-lg);
+            z-index: 999; display: flex; align-items: center; gap: 0.6rem;
+            border: 1px solid transparent;
+            animation: toastIn 0.25s ease both;
+        }
+        .toast-success { background: var(--bg-card); border-color: rgba(52,211,153,0.3); }
+        .toast-success svg { color: var(--green); }
+        .toast-warn { background: var(--bg-card); border-color: rgba(251,191,36,0.3); }
+        .toast-warn svg { color: var(--amber); }
+        @keyframes toastIn {
+            from { opacity:0; transform: translateY(8px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite; border-radius: var(--radius-sm);
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+    </style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<header class="mod-topbar">
+    <a href="dashboard.html" class="topbar-brand">
+        <div class="topbar-brand-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+        </div>
+        <span class="topbar-brand-name">VALIDATA GC</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-page-title">Moderator Portal</span>
+    <div class="topbar-right">
+        <div class="topbar-user-info">
+            <div class="topbar-user-name" data-mod-name>Loading…</div>
+            <div class="topbar-user-role"  data-mod-role></div>
+        </div>
+        <div class="topbar-avatar" data-mod-avatar>M</div>
+        <button class="btn-signout" id="signOutBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign Out
+        </button>
+    </div>
+</header>
+
+<!-- ══ BODY ══ -->
+<div class="mod-body">
+
+    <!-- Sidebar -->
+    <nav class="mod-sidebar">
+        <p class="sidebar-section-label">Moderation</p>
+        <a href="dashboard.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Claim Moderation
+        </a>
+        <a href="sources.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Source Verification
+        </a>
+        <a href="tags.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Misinfo Tagging
+        </a>
+        <a href="quality.html" class="sidebar-link active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            Quality Control
+        </a>
+        <p class="sidebar-section-label" style="margin-top:1rem;">Account</p>
+        <a href="../index.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Student App
+        </a>
+    </nav>
+
+    <!-- Main -->
+    <main class="mod-main" style="padding:0; display:flex; flex-direction:column; min-width:0;">
+
+        <!-- Header -->
+        <div style="padding: 1.75rem 2rem 1.25rem; border-bottom: 1px solid var(--border);">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                <div>
+                    <h1 class="mod-page-title">Content Quality Control</h1>
+                    <p class="mod-page-sub">Ensure all fact-check outputs meet academic standards before publication</p>
+                </div>
+                <div style="display:flex; gap:0.75rem;">
+                    <button class="mod-btn mod-btn-ghost" id="resetAllBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                            <polyline points="23 4 23 10 17 10"/>
+                            <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+                        </svg>
+                        Reset
+                    </button>
+                    <button class="mod-btn mod-btn-primary" id="saveReportBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                             stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        Save QC Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="qc-stats">
+            <div class="qc-stat-tile">
+                <div class="qc-stat-label">QC Reports Saved</div>
+                <div class="qc-stat-value blue" id="statReports">–</div>
+            </div>
+            <div class="qc-stat-tile">
+                <div class="qc-stat-label">Passed</div>
+                <div class="qc-stat-value green" id="statPassed">–</div>
+            </div>
+            <div class="qc-stat-tile">
+                <div class="qc-stat-label">Failed</div>
+                <div class="qc-stat-value red" id="statFailed">–</div>
+            </div>
+            <div class="qc-stat-tile">
+                <div class="qc-stat-label">Avg. QC Score</div>
+                <div class="qc-stat-value blue" id="statAvgScore">–</div>
+            </div>
+        </div>
+
+        <!-- QC Layout -->
+        <div class="qc-layout" style="flex:1;">
+
+            <!-- LEFT: checklist + claims -->
+            <div class="qc-left">
+
+                <!-- Claim selector -->
+                <div style="padding:1.25rem 1.5rem; border-bottom:1px solid var(--border);">
+                    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.875rem;">
+                        <p style="font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted);">
+                            Select Claim to Review
+                        </p>
+                        <span style="font-family:var(--font-mono); font-size:0.72rem; color:var(--text-muted);"
+                              id="claimSelectedLabel">None selected</span>
+                    </div>
+                    <div class="claim-selector mod-card" id="claimSelector"
+                         style="max-height:11rem; overflow-y:auto;">
+                        <div style="padding:1rem 1.25rem; color:var(--text-muted); font-size:0.855rem;">
+                            Loading claims…
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Academic Standards Checklist -->
+                <div class="checklist-wrap">
+                    <div class="checklist-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                             stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 11l3 3L22 4"/>
+                            <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+                        </svg>
+                        Academic Standards Checklist
+                    </div>
+
+                    <div id="checklistItems">
+                        <!-- Rendered by JS -->
+                    </div>
+
+                </div>
+
+                <!-- Moderator Notes -->
+                <div style="padding:0 1.5rem 1.5rem;">
+                    <p style="font-family:var(--font-mono); font-size:0.68rem; font-weight:500;
+                              letter-spacing:0.1em; text-transform:uppercase; color:var(--text-muted);
+                              margin-bottom:0.6rem;">Moderator QC Notes</p>
+                    <textarea class="report-textarea" id="qcNotes"
+                              placeholder="Add quality control notes, observations, or recommendations for this fact-check output…"></textarea>
+                </div>
+
+            </div>
+
+            <!-- RIGHT: score + dimensions + log -->
+            <div class="qc-right">
+
+                <!-- Score ring -->
+                <div class="score-ring-wrap">
+                    <p style="font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.1em;
+                              text-transform:uppercase; color:var(--text-muted); margin-bottom:1rem;">
+                        QC Score
+                    </p>
+                    <div class="score-ring">
+                        <svg viewBox="0 0 80 80">
+                            <circle class="score-ring-track" cx="40" cy="40" r="36"/>
+                            <circle class="score-ring-fill" id="scoreRingFill" cx="40" cy="40" r="36"/>
+                        </svg>
+                        <div class="score-ring-center">
+                            <div class="score-ring-value" id="scoreValue">–</div>
+                            <div class="score-ring-label">/ 100</div>
+                        </div>
+                    </div>
+                    <div class="overall-badge" id="overallBadge"
+                         style="background:var(--bg-hover); color:var(--text-muted);">
+                        Select a claim to begin
+                    </div>
+                </div>
+
+                <!-- Dimension breakdown -->
+                <div class="qc-right-section">
+                    <p class="qc-right-title">Dimension Scores</p>
+                    <div id="dimensionBars">
+                        <p style="font-size:0.825rem; color:var(--text-muted);">Complete the checklist to see dimension scores.</p>
+                    </div>
+                </div>
+
+                <!-- Standards reference -->
+                <div class="qc-right-section">
+                    <p class="qc-right-title">Academic Standards Reference</p>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        ${[
+                            ["Evidence-Based","All verdicts must cite verifiable, credible sources."],
+                            ["Objectivity","Language must remain neutral and non-inflammatory."],
+                            ["Transparency","Verification methodology must be clearly documented."],
+                            ["Reproducibility","Results must be independently verifiable."],
+                            ["Source Credibility","Only peer-reviewed or official sources qualify."]
+                        ].map(([t,d]) => `
+                            <div style="padding:0.75rem; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius-md);">
+                                <p style="font-size:0.8rem; font-weight:600; color:var(--text-secondary); margin-bottom:0.2rem;">${t}</p>
+                                <p style="font-size:0.75rem; color:var(--text-muted); line-height:1.5;">${d}</p>
+                            </div>`).join("")}
+                    </div>
+                </div>
+
+                <!-- Recent QC log -->
+                <div class="qc-right-section">
+                    <p class="qc-right-title">Recent QC Reports</p>
+                    <div id="qcLog">
+                        <p style="font-size:0.825rem; color:var(--text-muted);">No reports saved yet.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="toastContainer"></div>
+
+<script type="module">
+    import { requireMod }                                           from "../js/mod-auth.js";
+    import { modSignOut, getClaims, logActivity, db }              from "../js/mod-firebase.js";
+    import { collection, addDoc, getDocs, query,
+             where, orderBy, serverTimestamp }                      from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+
+    // ── Checklist definition ──────────────────────────────
+    const CHECKLIST = [
+        {
+            id: "evidence",
+            dimension: "Evidence",
+            title: "Evidence-Based Reasoning",
+            desc: "The verdict is supported by verifiable, credible sources. Claims are not made without backing.",
+            weight: 25
+        },
+        {
+            id: "objectivity",
+            dimension: "Objectivity",
+            title: "Objectivity & Neutral Language",
+            desc: "No loaded, emotional, or biased language is used. The output remains professionally neutral.",
+            weight: 20
+        },
+        {
+            id: "methodology",
+            dimension: "Methodology",
+            title: "Methodology Transparency",
+            desc: "The fact-check process is clearly documented. How the claim was verified is explained.",
+            weight: 20
+        },
+        {
+            id: "sources",
+            dimension: "Sources",
+            title: "Source Credibility & Citation",
+            desc: "Only peer-reviewed papers, official government data, or credible news sources are cited.",
+            weight: 20
+        },
+        {
+            id: "reproducibility",
+            dimension: "Reproducibility",
+            title: "Reproducibility",
+            desc: "The verdict can be independently verified by a third party using the same sources.",
+            weight: 15
+        }
+    ];
+
+    // ── Helpers ──────────────────────────────────────────
+    function toast(msg, type = "success") {
+        const el = document.createElement("div");
+        el.className = `toast toast-${type}`;
+        el.innerHTML = `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                ${type === "success"
+                    ? '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+                    : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+            </svg>
+            <span>${msg}</span>`;
+        document.getElementById("toastContainer").appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    function formatDate(ts) {
+        if (!ts) return "";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleDateString("en-PH", { month:"short", day:"numeric", hour:"2-digit", minute:"2-digit" });
+    }
+
+    const VERDICT_COLORS = {
+        "True": "var(--green)", "False": "var(--red)",
+        "Mixed": "var(--amber)", "Unverified": "var(--purple)",
+        "Cannot verify": "var(--text-muted)"
+    };
+
+    // ── State ─────────────────────────────────────────────
+    let allClaims   = [];
+    let selectedClaim = null;
+    let modProfile  = null;
+    let checkStates = {}; // { id: "passed" | "failed" | null }
+    let qcReports   = [];
+
+    CHECKLIST.forEach(c => checkStates[c.id] = null);
+
+    // ── Render checklist ──────────────────────────────────
+    function renderChecklist() {
+        const container = document.getElementById("checklistItems");
+        container.innerHTML = CHECKLIST.map(item => {
+            const state = checkStates[item.id];
+            return `
+            <div class="checklist-item ${state || ""}" id="check-${item.id}">
+                <div class="check-circle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        ${state === "failed"
+                            ? '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'
+                            : '<polyline points="20 6 9 17 4 12"/>'}
+                    </svg>
+                </div>
+                <div class="check-body" style="flex:1;">
+                    <h4>${item.title}</h4>
+                    <p>${item.desc}</p>
+                </div>
+                <div class="check-actions">
+                    ${state === null ? `
+                        <button class="check-btn check-btn-pass"
+                                onclick="setCheck('${item.id}', 'passed')">Pass</button>
+                        <button class="check-btn check-btn-fail"
+                                onclick="setCheck('${item.id}', 'failed')">Fail</button>
+                    ` : `
+                        <button class="check-btn check-btn-reset"
+                                onclick="setCheck('${item.id}', null)">Reset</button>
+                    `}
+                </div>
+            </div>`;
+        }).join("");
+
+        updateScore();
+    }
+
+    window.setCheck = function(id, state) {
+        if (!selectedClaim && state !== null) {
+            toast("Select a claim first before grading.", "warn");
+            return;
+        }
+        checkStates[id] = state;
+        renderChecklist();
+    };
+
+    // ── Score calculation ─────────────────────────────────
+    function updateScore() {
+        const gradedItems = CHECKLIST.filter(c => checkStates[c.id] !== null);
+        if (gradedItems.length === 0) {
+            setScoreDisplay(null);
+            renderDimensions([]);
+            return;
+        }
+
+        const totalWeight  = gradedItems.reduce((a, c) => a + c.weight, 0);
+        const passedWeight = gradedItems
+            .filter(c => checkStates[c.id] === "passed")
+            .reduce((a, c) => a + c.weight, 0);
+
+        const score = totalWeight > 0
+            ? Math.round((passedWeight / totalWeight) * 100)
+            : 0;
+
+        setScoreDisplay(score);
+        renderDimensions(gradedItems);
+    }
+
+    function setScoreDisplay(score) {
+        const valueEl  = document.getElementById("scoreValue");
+        const ringFill = document.getElementById("scoreRingFill");
+        const badge    = document.getElementById("overallBadge");
+        const circumference = 226;
+
+        if (score === null) {
+            valueEl.textContent = "–";
+            ringFill.style.strokeDashoffset = circumference;
+            ringFill.style.stroke = "var(--accent)";
+            badge.textContent = "In progress…";
+            badge.style.background = "var(--bg-hover)";
+            badge.style.color = "var(--text-muted)";
+            return;
+        }
+
+        valueEl.textContent = score;
+        const offset = circumference - (score / 100) * circumference;
+        ringFill.style.strokeDashoffset = offset;
+
+        let color, label, bg;
+        if (score >= 80)      { color = "var(--green)";  bg = "var(--green-dim)";  label = "Meets Standards ✓"; }
+        else if (score >= 60) { color = "var(--amber)";  bg = "var(--amber-dim)";  label = "Needs Improvement"; }
+        else                  { color = "var(--red)";    bg = "var(--red-dim)";    label = "Below Standards ✗"; }
+
+        ringFill.style.stroke = color;
+        badge.textContent = label;
+        badge.style.background = bg;
+        badge.style.color = color;
+    }
+
+    function renderDimensions(gradedItems) {
+        const el = document.getElementById("dimensionBars");
+        if (gradedItems.length === 0) {
+            el.innerHTML = `<p style="font-size:0.825rem; color:var(--text-muted);">Complete the checklist to see dimension scores.</p>`;
+            return;
+        }
+
+        el.innerHTML = CHECKLIST.map(item => {
+            const state = checkStates[item.id];
+            const pct   = state === "passed" ? 100 : state === "failed" ? 0 : null;
+            const color = state === "passed" ? "var(--green)" : state === "failed" ? "var(--red)" : "var(--bg-active)";
+            const label = state === "passed" ? "Pass" : state === "failed" ? "Fail" : "Pending";
+
+            return `
+            <div class="dimension-item">
+                <div class="dimension-row">
+                    <span class="dimension-name">${item.dimension}</span>
+                    <span class="dimension-score" style="color:${color};">${label}</span>
+                </div>
+                <div class="dimension-bar-track">
+                    <div class="dimension-bar-fill"
+                         style="width:${pct ?? 50}%; background:${color}; opacity:${pct === null ? 0.3 : 0.85};"></div>
+                </div>
+            </div>`;
+        }).join("");
+    }
+
+    // ── Claims selector ───────────────────────────────────
+    function renderClaimSelector() {
+        const container = document.getElementById("claimSelector");
+
+        if (allClaims.length === 0) {
+            container.innerHTML = `<div style="padding:1rem 1.25rem; color:var(--text-muted); font-size:0.855rem;">No approved claims to review.</div>`;
+            return;
+        }
+
+        container.innerHTML = allClaims.slice(0, 20).map(c => {
+            const verdict = c.credibility || "Unverified";
+            const color   = VERDICT_COLORS[verdict] || "var(--text-muted)";
+            const text    = (c.inputText || "").substring(0, 55) + (c.inputText?.length > 55 ? "…" : "");
+
+            return `
+            <div class="claim-option ${selectedClaim?.id === c.id ? "selected" : ""}"
+                 onclick="selectClaim('${c.id}')">
+                <div class="claim-option-dot" style="background:${color};"></div>
+                <span class="claim-option-text">${text}</span>
+                <span class="badge badge-gray" style="font-size:0.62rem; flex-shrink:0;">${verdict}</span>
+            </div>`;
+        }).join("");
+    }
+
+    window.selectClaim = function(id) {
+        selectedClaim = allClaims.find(c => c.id === id) || null;
+        // Reset checklist for new claim
+        CHECKLIST.forEach(c => checkStates[c.id] = null);
+        document.getElementById("qcNotes").value = "";
+        document.getElementById("claimSelectedLabel").textContent =
+            selectedClaim ? `"${(selectedClaim.inputText || "").substring(0, 30)}…"` : "None selected";
+        renderClaimSelector();
+        renderChecklist();
+    };
+
+    // ── Save QC report ────────────────────────────────────
+    document.getElementById("saveReportBtn").addEventListener("click", async () => {
+        if (!selectedClaim) {
+            toast("Please select a claim to review first.", "warn"); return;
+        }
+
+        const gradedItems = CHECKLIST.filter(c => checkStates[c.id] !== null);
+        if (gradedItems.length === 0) {
+            toast("Complete at least one checklist item before saving.", "warn"); return;
+        }
+
+        const totalWeight  = gradedItems.reduce((a, c) => a + c.weight, 0);
+        const passedWeight = gradedItems.filter(c => checkStates[c.id] === "passed").reduce((a,c) => a + c.weight, 0);
+        const score        = totalWeight > 0 ? Math.round((passedWeight / totalWeight) * 100) : 0;
+        const notes        = document.getElementById("qcNotes").value.trim();
+
+        const report = {
+            claimId:      selectedClaim.id,
+            claimPreview: (selectedClaim.inputText || "").substring(0, 80),
+            verdict:      selectedClaim.credibility || "Unverified",
+            checkResults: checkStates,
+            score,
+            passed:       score >= 80,
+            notes,
+            moderatorUid:   modProfile.uid,
+            moderatorEmail: modProfile.email,
+            createdAt: serverTimestamp()
+        };
+
+        try {
+            await addDoc(collection(db, "qcReports"), report);
+            await logActivity(modProfile.uid, "qc_report_saved", { claimId: selectedClaim.id, score });
+
+            qcReports.unshift({ ...report, createdAt: new Date() });
+            updateQcStats();
+            renderQcLog();
+
+            toast(`QC report saved — Score: ${score}%`);
+        } catch (e) {
+            toast("Failed to save report: " + e.message, "error");
+        }
+    });
+
+    // ── Reset ─────────────────────────────────────────────
+    document.getElementById("resetAllBtn").addEventListener("click", () => {
+        CHECKLIST.forEach(c => checkStates[c.id] = null);
+        document.getElementById("qcNotes").value = "";
+        renderChecklist();
+        toast("Checklist reset.");
+    });
+
+    // ── QC Reports log ────────────────────────────────────
+    async function loadQcReports() {
+        try {
+            const q    = query(collection(db, "qcReports"), orderBy("createdAt","desc"));
+            const snap = await getDocs(q);
+            qcReports  = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            updateQcStats();
+            renderQcLog();
+        } catch { /* silent */ }
+    }
+
+    function updateQcStats() {
+        const passed = qcReports.filter(r => r.passed).length;
+        const failed = qcReports.filter(r => !r.passed).length;
+        const avg    = qcReports.length
+            ? Math.round(qcReports.reduce((a,r) => a + (r.score||0), 0) / qcReports.length)
+            : 0;
+
+        document.getElementById("statReports").textContent  = qcReports.length;
+        document.getElementById("statPassed").textContent   = passed;
+        document.getElementById("statFailed").textContent   = failed;
+        document.getElementById("statAvgScore").textContent = avg + "%";
+    }
+
+    function renderQcLog() {
+        const el = document.getElementById("qcLog");
+        if (qcReports.length === 0) {
+            el.innerHTML = `<p style="font-size:0.825rem; color:var(--text-muted);">No reports saved yet.</p>`;
+            return;
+        }
+
+        el.innerHTML = qcReports.slice(0, 8).map(r => {
+            const color = r.passed ? "var(--green)" : "var(--red)";
+            const date  = formatDate(r.createdAt);
+            return `
+            <div class="log-item">
+                <div class="log-dot" style="background:${color};"></div>
+                <div class="log-text">
+                    <span style="font-weight:600; color:var(--text-primary);">${r.score}%</span>
+                    — ${(r.claimPreview || "").substring(0, 35)}…
+                </div>
+                <span class="log-time">${date}</span>
+            </div>`;
+        }).join("");
+    }
+
+    // ── Sign out ──────────────────────────────────────────
+    document.getElementById("signOutBtn").addEventListener("click", () => modSignOut());
+
+    // ── Init ──────────────────────────────────────────────
+    requireMod(async (profile) => {
+        modProfile = profile;
+        renderChecklist();
+
+        // Load approved claims for QC review
+        allClaims = await getClaims();
+        allClaims = allClaims.filter(c =>
+            c.moderatorStatus === "approved" || !c.moderatorStatus
+        );
+        renderClaimSelector();
+        await loadQcReports();
+    });
+</script>
+
+</body>
+</html>

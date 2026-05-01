@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC - Home</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">VALIDATA GC</a>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">Home</a>
+                <a href="tips.html" class="nav-link">Tips</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Home Page -->
+    <main class="hero-container">
+        <div class="hero-content">
+            <div class="hero-text">
+                <h1 class="hero-title">VALIDATA GC</h1>
+                <p class="hero-subtitle">Verify Before Sharing</p>
+            </div>
+            <div class="hero-buttons">
+                <a href="input.html" class="btn btn-primary">Start Verification</a>
+                <a href="tips.html" class="btn btn-secondary">Learn Tips</a>
+            </div>
+        </div>
+    </main>
+    <script type="module">
+        import { initNav } from "../js/firebase.js";
+        initNav();
+    </script>
+</body>
+</html>

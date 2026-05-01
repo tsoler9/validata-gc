@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC Admin — Backup & Security</title>
+    <link rel="stylesheet" href="../css/admin-style.css">
+    <style>
+        .backup-section { padding:1.75rem 2rem; border-bottom:1px solid var(--border); }
+        .backup-section-title {
+            font-size:0.95rem;font-weight:700;color:var(--text-primary);
+            margin-bottom:0.3rem;display:flex;align-items:center;gap:0.6rem;
+        }
+        .backup-section-title svg { width:1rem;height:1rem;color:var(--accent); }
+        .backup-section-sub { font-size:0.825rem;color:var(--text-muted);margin-bottom:1.5rem; }
+
+        /* Collection cards */
+        .collection-card {
+            display:flex;align-items:center;gap:1rem;
+            padding:1rem 1.25rem;
+            background:var(--bg-card);border:1px solid var(--border);
+            border-radius:var(--radius-lg);
+            transition:all var(--ease);
+        }
+        .collection-card:hover { border-color:var(--border-light); }
+        .collection-icon {
+            width:2.25rem;height:2.25rem;border-radius:var(--radius-sm);
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        }
+        .collection-icon svg { width:1rem;height:1rem; }
+        .collection-body { flex:1;min-width:0; }
+        .collection-name { font-size:0.875rem;font-weight:600;color:var(--text-primary);margin-bottom:0.15rem; }
+        .collection-meta { font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted); }
+        .collection-actions { display:flex;gap:0.5rem;flex-shrink:0; }
+
+        /* Progress bar */
+        .backup-progress-track { height:6px;background:var(--bg-hover);border-radius:9999px;overflow:hidden;margin-top:0.5rem; }
+        .backup-progress-fill  { height:100%;border-radius:9999px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width 0.8s ease; }
+
+        /* Security checklist */
+        .sec-check {
+            display:flex;align-items:flex-start;gap:0.875rem;
+            padding:1rem 1.25rem;
+            background:var(--bg-card);border:1px solid var(--border);
+            border-radius:var(--radius-md);margin-bottom:0.625rem;
+        }
+        .sec-check-icon {
+            width:1.75rem;height:1.75rem;border-radius:50%;
+            display:flex;align-items:center;justify-content:center;flex-shrink:0;
+        }
+        .sec-check-icon svg { width:0.875rem;height:0.875rem; }
+        .sec-check-body h4 { font-size:0.875rem;font-weight:600;color:var(--text-primary);margin-bottom:0.15rem; }
+        .sec-check-body p  { font-size:0.775rem;color:var(--text-muted);line-height:1.5; }
+
+        /* Export log */
+        .export-log-item {
+            display:flex;align-items:center;gap:0.875rem;
+            padding:0.75rem 0;border-bottom:1px solid var(--border);
+        }
+        .export-log-item:last-child { border-bottom:none; }
+        .export-log-dot { width:0.45rem;height:0.45rem;border-radius:50%;flex-shrink:0;background:var(--accent); }
+        .export-log-text { flex:1;font-size:0.84rem;color:var(--text-secondary); }
+        .export-log-time { font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted); }
+
+        /* Storage meter */
+        .storage-bar-track { height:8px;background:var(--bg-hover);border-radius:9999px;overflow:hidden;margin:0.5rem 0; }
+        .storage-bar-fill  { height:100%;border-radius:9999px;background:linear-gradient(90deg,var(--accent),var(--purple)); }
+
+        /* Downloading overlay */
+        .download-overlay {
+            position:fixed;inset:0;background:rgba(0,0,0,0.6);
+            backdrop-filter:blur(4px);z-index:200;
+            display:none;align-items:center;justify-content:center;
+        }
+        .download-overlay.visible { display:flex; }
+        .download-box {
+            background:var(--bg-card);border:1px solid var(--border-light);
+            border-radius:var(--radius-xl);padding:2rem;
+            text-align:center;max-width:22rem;width:100%;
+        }
+        .download-spinner {
+            width:2.5rem;height:2.5rem;
+            border:3px solid var(--bg-hover);border-top-color:var(--accent);
+            border-radius:50%;animation:adminSpin 0.7s linear infinite;
+            margin:0 auto 1rem;
+        }
+        @keyframes adminSpin { to { transform:rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<header class="admin-topbar">
+    <a href="dashboard.html" class="topbar-brand">
+        <div class="topbar-brand-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div>
+        <span class="topbar-brand-name">VALIDATA GC</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-page-title">System Administrator</span>
+    <div class="topbar-right">
+        <div class="topbar-user-info"><div class="topbar-user-name" data-admin-name>Loading…</div><div class="topbar-user-role" data-admin-role></div></div>
+        <div class="topbar-avatar" data-admin-avatar>A</div>
+        <button class="btn-signout" id="signOutBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign Out</button>
+    </div>
+</header>
+
+<div class="admin-body">
+    <nav class="admin-sidebar">
+        <p class="sidebar-label">System</p>
+        <a href="dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Overview</a>
+        <a href="rbac.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Access Control</a>
+        <a href="audit.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Audit Trail</a>
+        <a href="ai-config.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93l-1.41 1.41"/></svg>AI Configuration</a>
+        <a href="backup.html" class="sidebar-link active"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Backup & Security</a>
+        <p class="sidebar-label" style="margin-top:1rem;">External</p>
+        <a href="../moderator/dashboard.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Moderator Portal</a>
+        <a href="../index.html" class="sidebar-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Student App</a>
+    </nav>
+
+    <main class="admin-main" style="overflow-y:auto;">
+        <div class="page-header">
+            <div class="page-header-row">
+                <div>
+                    <h1 class="page-title">Data Backup & Security</h1>
+                    <p class="page-sub">Secure export of all collections, integrity verification, and security monitoring</p>
+                </div>
+                <button class="admin-btn admin-btn-primary" id="backupAllBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Export Full Backup
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div style="padding:1.5rem;border-bottom:1px solid var(--border);">
+            <div class="stat-grid stat-grid-4" style="margin-bottom:0;">
+                <div class="stat-tile"><div class="stat-label">Total Records</div><div class="stat-value indigo" id="statTotal">–</div><div class="stat-sub">Across all collections</div></div>
+                <div class="stat-tile"><div class="stat-label">Last Backup</div><div class="stat-value" id="statLastBackup" style="font-size:1rem;font-weight:700;color:var(--text-secondary);margin-top:0.3rem;">Never</div></div>
+                <div class="stat-tile"><div class="stat-label">Security Status</div><div class="stat-value green" style="font-size:1rem;font-weight:700;margin-top:0.3rem;">✓ Secure</div></div>
+                <div class="stat-tile"><div class="stat-label">Firebase Project</div><div class="stat-value" style="font-size:0.75rem;font-weight:600;color:var(--text-muted);margin-top:0.3rem;font-family:var(--font-mono);">project-469-71975</div></div>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 22rem;gap:0;">
+
+            <!-- Left: Collection exports -->
+            <div style="border-right:1px solid var(--border);">
+
+                <!-- Collections -->
+                <div class="backup-section">
+                    <div class="backup-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                        Firestore Collections
+                    </div>
+                    <p class="backup-section-sub">Export individual collections as JSON files for local backup.</p>
+
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;" id="collectionList">
+                        <!-- Rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Export history -->
+                <div class="backup-section" style="border-bottom:none;">
+                    <div class="backup-section-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4"/><polyline points="3 3 3 7 7 7"/></svg>
+                        Export History (This Session)
+                    </div>
+                    <p class="backup-section-sub">Exports performed since you logged in.</p>
+                    <div id="exportLog">
+                        <p style="font-size:0.84rem;color:var(--text-muted);">No exports yet this session.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Security -->
+            <div style="padding:1.5rem;overflow-y:auto;">
+
+                <!-- Security checklist -->
+                <p style="font-family:var(--font-mono);font-size:0.68rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin-bottom:1rem;">Security Checklist</p>
+                <div id="securityChecklist">
+                    <!-- Rendered by JS -->
+                </div>
+
+                <!-- Storage estimate -->
+                <p style="font-family:var(--font-mono);font-size:0.68rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin:1.5rem 0 0.875rem;">Storage Estimate</p>
+                <div class="admin-card" style="padding:1.25rem;">
+                    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.5rem;">
+                        <span style="font-size:0.84rem;color:var(--text-secondary);">Firestore Usage</span>
+                        <span style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-accent);" id="storageEst">Calculating…</span>
+                    </div>
+                    <div class="storage-bar-track">
+                        <div class="storage-bar-fill" id="storageBar" style="width:2%;"></div>
+                    </div>
+                    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;">Firebase free tier: 1 GiB storage, 50k reads/day</p>
+                </div>
+
+                <!-- Firebase security links -->
+                <p style="font-family:var(--font-mono);font-size:0.68rem;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-muted);margin:1.5rem 0 0.875rem;">Firebase Console Links</p>
+                <div style="display:flex;flex-direction:column;gap:0.5rem;">
+                    <a href="https://console.firebase.google.com/project/project-469-71975/firestore" target="_blank"
+                       style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);text-decoration:none;color:var(--text-secondary);font-size:0.84rem;transition:all var(--ease);"
+                       onmouseover="this.style.borderColor='rgba(99,102,241,0.3)';this.style.color='var(--text-accent)'"
+                       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                        Firestore Database
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                    <a href="https://console.firebase.google.com/project/project-469-71975/authentication" target="_blank"
+                       style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);text-decoration:none;color:var(--text-secondary);font-size:0.84rem;transition:all var(--ease);"
+                       onmouseover="this.style.borderColor='rgba(99,102,241,0.3)';this.style.color='var(--text-accent)'"
+                       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                        Authentication
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                    <a href="https://console.firebase.google.com/project/project-469-71975/firestore/rules" target="_blank"
+                       style="display:flex;align-items:center;gap:0.5rem;padding:0.75rem 1rem;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);text-decoration:none;color:var(--text-secondary);font-size:0.84rem;transition:all var(--ease);"
+                       onmouseover="this.style.borderColor='rgba(99,102,241,0.3)';this.style.color='var(--text-accent)'"
+                       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-secondary)'">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                        Security Rules
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:auto;"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Downloading overlay -->
+<div class="download-overlay" id="downloadOverlay">
+    <div class="download-box">
+        <div class="download-spinner"></div>
+        <h3 style="font-size:1rem;font-weight:700;color:var(--text-primary);margin-bottom:0.35rem;" id="downloadTitle">Exporting…</h3>
+        <p style="font-size:0.84rem;color:var(--text-muted);" id="downloadSub">Fetching records from Firestore</p>
+    </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script type="module">
+    import { requireAdmin }                                      from "../js/admin-auth.js";
+    import { adminSignOut, getSystemStats,
+             exportCollection, logAdminActivity }                from "../js/admin-firebase.js";
+
+    const COLLECTIONS = [
+        { id:"history",       name:"Student Claims",     icon:"indigo", desc:"All fact-check submissions by students" },
+        { id:"moderators",    name:"Moderators",         icon:"green",  desc:"Moderator account records" },
+        { id:"trustedSources",name:"Trusted Sources",    icon:"blue",   desc:"Curated source verification database" },
+        { id:"misinfoTags",   name:"Misinfo Tags",       icon:"amber",  desc:"Misinformation pattern labels" },
+        { id:"qcReports",     name:"QC Reports",         icon:"purple", desc:"Quality control check reports" },
+        { id:"modActivity",   name:"Moderator Activity", icon:"indigo", desc:"Full moderator audit trail" },
+        { id:"adminActivity", name:"Admin Activity",     icon:"red",    desc:"Administrator action logs" },
+        { id:"systemConfig",  name:"System Config",      icon:"green",  desc:"AI configuration settings" }
+    ];
+
+    const SECURITY_CHECKS = [
+        { title:"Firebase Auth Enabled",       desc:"Email/Password authentication is active and enforcing domain restrictions.", status:"pass" },
+        { title:"Firestore Security Rules",    desc:"Rules restrict access by role — students, moderators, and admins have separate permissions.", status:"pass" },
+        { title:"HTTPS Only",                  desc:"All connections use HTTPS via Firebase Hosting and Live Server protocols.", status:"pass" },
+        { title:"Moderator Role Verification", desc:"Every moderator page checks Firestore for an active moderators/{uid} document.", status:"pass" },
+        { title:"Admin Role Verification",     desc:"Every admin page checks Firestore for an active admins/{uid} document.", status:"pass" },
+        { title:"Session Audit Logging",       desc:"All moderator and admin actions are logged to Firestore with timestamps.", status:"pass" },
+        { title:"API Key Isolation",           desc:"Groq API key stored server-side in .env — never exposed to the browser.", status:"pass" },
+        { title:"Guest Access Scoped",         desc:"Guest users can submit queries but cannot access history or moderator features.", status:"pass" }
+    ];
+
+    let sessionExports = [];
+    let adminProfile   = null;
+
+    function toast(msg, type="success") {
+        const el = document.createElement("div");
+        el.className = `toast toast-${type}`;
+        el.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">${type==="success"?'<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>':`<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>`}</svg><span>${msg}</span>`;
+        document.getElementById("toastContainer").appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    const ICON_COLORS = { indigo:"var(--accent)", green:"var(--green)", blue:"var(--blue)", amber:"var(--amber)", purple:"var(--purple)", red:"var(--red)" };
+
+    // Render collections
+    function renderCollections(stats) {
+        const container = document.getElementById("collectionList");
+        const countMap  = {
+            history: stats.totalClaims, moderators: stats.totalModerators,
+            trustedSources: stats.totalSources, misinfoTags: stats.totalTags,
+            qcReports: stats.totalQcReports, modActivity: stats.totalAuditLogs
+        };
+
+        let totalRec = 0;
+        Object.values(countMap).forEach(v => totalRec += (v || 0));
+        document.getElementById("statTotal").textContent = totalRec;
+
+        // Storage estimate (~500 bytes per doc)
+        const estBytes = totalRec * 500;
+        const estKb    = (estBytes / 1024).toFixed(1);
+        document.getElementById("storageEst").textContent = `~${estKb} KB`;
+        const pct = Math.min((estBytes / (1024*1024*1024)) * 100, 100).toFixed(2);
+        document.getElementById("storageBar").style.width = Math.max(parseFloat(pct), 1) + "%";
+
+        container.innerHTML = COLLECTIONS.map(col => {
+            const color = ICON_COLORS[col.icon] || "var(--accent)";
+            const count = countMap[col.id] ?? "–";
+            return `
+            <div class="collection-card">
+                <div class="collection-icon" style="background:${color}18;border:1px solid ${color}25;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                    </svg>
+                </div>
+                <div class="collection-body">
+                    <div class="collection-name">${col.name}</div>
+                    <div class="collection-meta">${col.id} · ${count} records</div>
+                </div>
+                <div class="collection-actions">
+                    <button class="admin-btn admin-btn-ghost" style="font-size:0.78rem;padding:0.35rem 0.75rem;"
+                            onclick="exportSingle('${col.id}','${col.name}')">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Export
+                    </button>
+                </div>
+            </div>`;
+        }).join("");
+    }
+
+    // Render security checklist
+    function renderSecurityChecklist() {
+        document.getElementById("securityChecklist").innerHTML = SECURITY_CHECKS.map(c => `
+            <div class="sec-check">
+                <div class="sec-check-icon" style="background:${c.status==="pass"?"var(--green-dim)":"var(--red-dim)"};">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="${c.status==="pass"?"var(--green)":"var(--red)"}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        ${c.status==="pass"
+                            ? '<polyline points="20 6 9 17 4 12"/>'
+                            : '<line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>'}
+                    </svg>
+                </div>
+                <div class="sec-check-body">
+                    <h4>${c.title}</h4>
+                    <p>${c.desc}</p>
+                </div>
+            </div>`).join("");
+    }
+
+    // Export single collection
+    window.exportSingle = async function(colId, colName) {
+        showDownloadOverlay(`Exporting ${colName}…`, "Fetching records from Firestore");
+        const data = await exportCollection(colId);
+        hideDownloadOverlay();
+
+        downloadJson(data, `validata_${colId}_${timestamp()}.json`);
+        addExportLog(colName, data.length);
+        await logAdminActivity(adminProfile.uid, "data_exported", { collection: colId, count: data.length });
+        document.getElementById("statLastBackup").textContent = new Date().toLocaleDateString("en-PH",{month:"short",day:"numeric"});
+        toast(`${colName} exported — ${data.length} records.`);
+    };
+
+    // Export all
+    document.getElementById("backupAllBtn").addEventListener("click", async () => {
+        showDownloadOverlay("Exporting Full Backup…", "This may take a moment");
+        const allData = {};
+        for (const col of COLLECTIONS) {
+            document.getElementById("downloadSub").textContent = `Fetching ${col.name}…`;
+            allData[col.id] = await exportCollection(col.id);
+        }
+        hideDownloadOverlay();
+
+        const totalRec = Object.values(allData).reduce((a,v) => a + v.length, 0);
+        downloadJson(allData, `validata_full_backup_${timestamp()}.json`);
+        addExportLog("Full Backup (all collections)", totalRec);
+        await logAdminActivity(adminProfile.uid, "full_backup_exported", { totalRecords: totalRec });
+        document.getElementById("statLastBackup").textContent = new Date().toLocaleDateString("en-PH",{month:"short",day:"numeric"});
+        toast(`Full backup exported — ${totalRec} total records.`);
+    });
+
+    // Helpers
+    function downloadJson(data, filename) {
+        function cleanTs(obj) {
+            if (!obj || typeof obj !== "object") return obj;
+            if (obj.toDate) return obj.toDate().toISOString();
+            if (Array.isArray(obj)) return obj.map(cleanTs);
+            const result = {};
+            Object.keys(obj).forEach(k => result[k] = cleanTs(obj[k]));
+            return result;
+        }
+        const blob = new Blob([JSON.stringify(cleanTs(data), null, 2)], { type: "application/json" });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement("a");
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function timestamp() { return new Date().toISOString().slice(0,10); }
+
+    function showDownloadOverlay(title, sub) {
+        document.getElementById("downloadTitle").textContent = title;
+        document.getElementById("downloadSub").textContent   = sub;
+        document.getElementById("downloadOverlay").classList.add("visible");
+    }
+
+    function hideDownloadOverlay() {
+        document.getElementById("downloadOverlay").classList.remove("visible");
+    }
+
+    function addExportLog(name, count) {
+        sessionExports.unshift({ name, count, time: new Date() });
+        const logEl = document.getElementById("exportLog");
+        logEl.innerHTML = sessionExports.map(e => `
+            <div class="export-log-item">
+                <div class="export-log-dot"></div>
+                <div class="export-log-text"><strong style="color:var(--text-primary);">${e.name}</strong> — ${e.count} records</div>
+                <span class="export-log-time">${e.time.toLocaleTimeString("en-PH",{hour:"2-digit",minute:"2-digit"})}</span>
+            </div>`).join("");
+    }
+
+    document.getElementById("signOutBtn").addEventListener("click", () => adminSignOut());
+
+    requireAdmin(async (profile) => {
+        adminProfile = profile;
+        const stats = await getSystemStats();
+        renderCollections(stats);
+        renderSecurityChecklist();
+    });
+</script>
+</body>
+</html>

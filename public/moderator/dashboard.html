@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validata GC Moderator — Claim Moderation</title>
+    <link rel="stylesheet" href="../css/mod-style.css">
+    <style>
+        /* ── Dashboard-specific styles ── */
+
+        /* Claims list */
+        .claims-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .claim-row {
+            display: grid;
+            grid-template-columns: 2.5rem 1fr auto auto;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background var(--ease);
+            position: relative;
+        }
+
+        .claim-row:last-child { border-bottom: none; }
+
+        .claim-row:hover { background: var(--bg-hover); }
+
+        .claim-row.selected {
+            background: var(--accent-dim);
+            border-left: 2px solid var(--accent);
+        }
+
+        /* Risk indicator dot */
+        .risk-dot {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin: 0 auto;
+        }
+        .risk-dot.critical { background: var(--red);    box-shadow: 0 0 6px var(--red); }
+        .risk-dot.high     { background: var(--amber);  box-shadow: 0 0 6px var(--amber); }
+        .risk-dot.medium   { background: #60a5fa; }
+        .risk-dot.low      { background: var(--green); }
+
+        .claim-body { min-width: 0; }
+
+        .claim-text {
+            font-size: 0.875rem;
+            color: var(--text-primary);
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 0.3rem;
+        }
+
+        .claim-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .claim-meta-item {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .claim-verdict {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-align: right;
+            flex-shrink: 0;
+            min-width: 5rem;
+        }
+
+        .claim-status { flex-shrink: 0; }
+
+        /* Detail panel */
+        .detail-panel {
+            width: 26rem;
+            flex-shrink: 0;
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: sticky;
+            top: var(--nav-h);
+            height: calc(100vh - var(--nav-h));
+            overflow-y: auto;
+            background: var(--bg-surface);
+        }
+
+        .detail-empty {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            padding: 2rem;
+            text-align: center;
+            gap: 0.75rem;
+        }
+
+        .detail-empty svg {
+            width: 2.5rem;
+            height: 2.5rem;
+            opacity: 0.2;
+        }
+
+        .detail-empty p { font-size: 0.85rem; line-height: 1.6; }
+
+        .detail-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .detail-header-title {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .detail-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0.25rem;
+            line-height: 1;
+            font-size: 1.1rem;
+            transition: color var(--ease);
+        }
+        .detail-close:hover { color: var(--text-primary); }
+
+        .detail-body { padding: 1.5rem; flex: 1; }
+
+        .detail-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .detail-section-label {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .detail-claim-text {
+            font-size: 0.9rem;
+            color: var(--text-primary);
+            line-height: 1.7;
+            padding: 0.875rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-style: italic;
+        }
+
+        .detail-verdict-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            margin-bottom: 1rem;
+        }
+
+        .detail-verdict-label {
+            font-family: var(--font-mono);
+            font-size: 0.68rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.25rem;
+        }
+
+        .detail-verdict-value {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+        }
+
+        .confidence-bar-wrap {
+            margin-top: 0.5rem;
+        }
+
+        .confidence-bar-track {
+            height: 4px;
+            background: var(--bg-hover);
+            border-radius: 9999px;
+            overflow: hidden;
+            margin-top: 0.35rem;
+        }
+
+        .confidence-bar-fill {
+            height: 100%;
+            border-radius: 9999px;
+            background: linear-gradient(90deg, #60a5fa, var(--accent));
+            transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .detail-explanation {
+            font-size: 0.855rem;
+            color: var(--text-secondary);
+            line-height: 1.75;
+            padding: 0.875rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+        }
+
+        .source-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.65rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 9999px;
+            font-family: var(--font-mono);
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            margin: 0.2rem;
+            text-decoration: none;
+            transition: all var(--ease);
+        }
+        .source-chip:hover { border-color: var(--accent); color: var(--text-accent); }
+
+        .mod-note-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-primary);
+            font-family: var(--font-body);
+            font-size: 0.855rem;
+            resize: vertical;
+            min-height: 5rem;
+            outline: none;
+            transition: all var(--ease);
+            line-height: 1.6;
+        }
+        .mod-note-input::placeholder { color: var(--text-muted); }
+        .mod-note-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-glow);
+        }
+
+        .detail-actions {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .detail-actions .mod-btn { flex: 1; padding: 0.65rem; font-size: 0.855rem; }
+
+        /* Filters bar */
+        .filters-bar {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.875rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-hover);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            cursor: pointer;
+            outline: none;
+            transition: all var(--ease);
+        }
+        .filter-select:focus { border-color: var(--accent); color: var(--text-primary); }
+
+        .filter-count {
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: auto;
+        }
+
+        /* Two-col layout for main + detail */
+        .dashboard-layout {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .dashboard-left { flex: 1; min-width: 0; overflow-y: auto; }
+
+        /* Loading skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, var(--bg-card) 25%, var(--bg-hover) 50%, var(--bg-card) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.4s infinite;
+            border-radius: var(--radius-sm);
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            padding: 0.875rem 1.25rem;
+            border-radius: var(--radius-md);
+            font-size: 0.855rem;
+            font-weight: 500;
+            color: var(--text-primary);
+            box-shadow: var(--shadow-lg);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            border: 1px solid transparent;
+            animation: toastIn 0.25s ease both;
+            max-width: 22rem;
+        }
+        .toast-success { background: var(--bg-card); border-color: rgba(52,211,153,0.3); }
+        .toast-success svg { color: var(--green); }
+        .toast-error   { background: var(--bg-card); border-color: rgba(248,113,113,0.3); }
+        .toast-error svg { color: var(--red); }
+        @keyframes toastIn {
+            from { opacity:0; transform: translateY(8px); }
+            to   { opacity:1; transform: translateY(0); }
+        }
+
+        /* Spinner in detail */
+        .detail-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 2rem;
+            gap: 0.75rem;
+        }
+        .detail-loader {
+            width: 1.75rem; height: 1.75rem;
+            border: 2px solid var(--bg-hover);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: modSpin 0.65s linear infinite;
+        }
+        @keyframes modSpin { to { transform: rotate(360deg); } }
+
+        .detail-loader-text { font-size: 0.8rem; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<header class="mod-topbar">
+    <a href="dashboard.html" class="topbar-brand">
+        <div class="topbar-brand-icon">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+            </svg>
+        </div>
+        <span class="topbar-brand-name">VALIDATA GC</span>
+    </a>
+    <div class="topbar-sep"></div>
+    <span class="topbar-page-title">Moderator Portal</span>
+    <div class="topbar-right">
+        <div class="topbar-user-info">
+            <div class="topbar-user-name" data-mod-name>Loading…</div>
+            <div class="topbar-user-role"  data-mod-role></div>
+        </div>
+        <div class="topbar-avatar" data-mod-avatar>M</div>
+        <button class="btn-signout" id="signOutBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sign Out
+        </button>
+    </div>
+</header>
+
+<!-- ══ BODY ══ -->
+<div class="mod-body">
+
+    <!-- ── Sidebar ── -->
+    <nav class="mod-sidebar">
+        <p class="sidebar-section-label">Moderation</p>
+
+        <a href="dashboard.html" class="sidebar-link active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Claim Moderation
+            <span class="sidebar-badge" id="pendingBadge">…</span>
+        </a>
+
+        <a href="sources.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Source Verification
+        </a>
+
+        <a href="tags.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/>
+                <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Misinfo Tagging
+        </a>
+
+        <a href="quality.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+                <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Quality Control
+        </a>
+
+        <p class="sidebar-section-label" style="margin-top:1rem;">Account</p>
+
+        <a href="../student/index.html" class="sidebar-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                 stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+            Student App
+        </a>
+    </nav>
+
+    <!-- ── Main ── -->
+    <main class="mod-main" style="padding:0; display:flex; flex-direction:column; min-width:0;">
+
+        <!-- Page header -->
+        <div style="padding: 1.75rem 2rem 1.25rem; border-bottom: 1px solid var(--border);">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; flex-wrap:wrap;">
+                <div>
+                    <h1 class="mod-page-title">Claim Moderation Dashboard</h1>
+                    <p class="mod-page-sub">Review flagged submissions and approve or reject AI-generated verdicts</p>
+                </div>
+                <button class="mod-btn mod-btn-ghost" id="refreshBtn" style="align-self:flex-start; gap:0.4rem;">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="23 4 23 10 17 10"/>
+                        <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+
+            <!-- Stat tiles -->
+            <div class="stat-grid" style="margin-top:1.5rem; margin-bottom:0;">
+                <div class="stat-tile">
+                    <div class="stat-label">Pending Review</div>
+                    <div class="stat-value amber" id="statPending">–</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value green" id="statApproved">–</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Rejected</div>
+                    <div class="stat-value red" id="statRejected">–</div>
+                </div>
+                <div class="stat-tile">
+                    <div class="stat-label">Total Claims</div>
+                    <div class="stat-value blue" id="statTotal">–</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard two-col layout -->
+        <div class="dashboard-layout" style="flex:1; min-height:0;">
+
+            <!-- Claims list -->
+            <div class="dashboard-left">
+
+                <!-- Filters -->
+                <div class="filters-bar">
+                    <select class="filter-select" id="filterStatus">
+                        <option value="all">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="approved">Approved</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                    <select class="filter-select" id="filterVerdict">
+                        <option value="all">All Verdicts</option>
+                        <option value="True">True</option>
+                        <option value="False">False</option>
+                        <option value="Mixed">Mixed</option>
+                        <option value="Unverified">Unverified</option>
+                    </select>
+                    <select class="filter-select" id="filterRisk">
+                        <option value="all">All Risk</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                    <span class="filter-count" id="filterCount">0 claims</span>
+                </div>
+
+                <!-- Claims -->
+                <div class="claims-list mod-card" style="border-radius:0; border-left:none; border-right:none; border-bottom:none;">
+                    <div id="claimsList">
+                        <!-- Skeleton loader -->
+                        <div style="padding:1.25rem; display:flex; flex-direction:column; gap:0.75rem;">
+                            <div class="skeleton" style="height:14px; width:80%;"></div>
+                            <div class="skeleton" style="height:10px; width:45%;"></div>
+                        </div>
+                        <div style="padding:1.25rem; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:0.75rem;">
+                            <div class="skeleton" style="height:14px; width:65%;"></div>
+                            <div class="skeleton" style="height:10px; width:50%;"></div>
+                        </div>
+                        <div style="padding:1.25rem; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:0.75rem;">
+                            <div class="skeleton" style="height:14px; width:72%;"></div>
+                            <div class="skeleton" style="height:10px; width:40%;"></div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Detail panel -->
+            <aside class="detail-panel" id="detailPanel">
+                <div class="detail-empty" id="detailEmpty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p>Select a claim from the list<br>to review the AI verdict</p>
+                </div>
+                <div id="detailContent" style="display:none; flex-direction:column; height:100%;">
+                    <!-- Filled dynamically -->
+                </div>
+            </aside>
+
+        </div>
+    </main>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div id="toastContainer"></div>
+
+<script type="module">
+    import { requireMod }                               from "../js/mod-auth.js";
+    import { modSignOut, getClaims, updateClaimStatus, logActivity } from "../js/mod-firebase.js";
+
+    // ── Helpers ──────────────────────────────────────────
+
+    const VERDICT_COLORS = {
+        "True":       "var(--green)",
+        "False":      "var(--red)",
+        "Mixed":      "var(--amber)",
+        "Unverified": "var(--purple)",
+        "Cannot verify": "var(--text-muted)"
+    };
+
+    const RISK_LEVELS = { critical: 4, high: 3, medium: 2, low: 1 };
+
+    function riskLevel(claim) {
+        const verdict = claim.credibility || "";
+        if (verdict === "False")      return "critical";
+        if (verdict === "Mixed")      return "high";
+        if (verdict === "Unverified") return "medium";
+        return "low";
+    }
+
+    function formatDate(ts) {
+        if (!ts) return "Unknown";
+        const d = ts.toDate ? ts.toDate() : new Date(ts);
+        return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    }
+
+    function truncate(str, n) {
+        return str?.length > n ? str.substring(0, n) + "…" : (str || "");
+    }
+
+    function toast(msg, type = "success") {
+        const el = document.createElement("div");
+        el.className = `toast toast-${type}`;
+        el.innerHTML = `
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                ${type === "success"
+                    ? '<path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>'
+                    : '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'}
+            </svg>
+            <span>${msg}</span>`;
+        document.getElementById("toastContainer").appendChild(el);
+        setTimeout(() => el.remove(), 3500);
+    }
+
+    // ── State ─────────────────────────────────────────────
+    let allClaims    = [];
+    let selectedId   = null;
+    let modProfile   = null;
+
+    // ── Render claims list ────────────────────────────────
+    function filteredClaims() {
+        const status  = document.getElementById("filterStatus").value;
+        const verdict = document.getElementById("filterVerdict").value;
+        const risk    = document.getElementById("filterRisk").value;
+
+        return allClaims.filter(c => {
+            const claimStatus  = c.moderatorStatus || "pending";
+            const claimVerdict = c.credibility     || "";
+            const claimRisk    = riskLevel(c);
+
+            if (status  !== "all" && claimStatus  !== status)  return false;
+            if (verdict !== "all" && claimVerdict !== verdict)  return false;
+            if (risk    !== "all" && claimRisk    !== risk)     return false;
+            return true;
+        });
+    }
+
+    function renderList() {
+        const claims  = filteredClaims();
+        const listEl  = document.getElementById("claimsList");
+        const countEl = document.getElementById("filterCount");
+
+        countEl.textContent = `${claims.length} claim${claims.length !== 1 ? "s" : ""}`;
+
+        if (claims.length === 0) {
+            listEl.innerHTML = `
+                <div style="padding:3rem 2rem; text-align:center; color:var(--text-muted);">
+                    <p style="font-size:0.875rem;">No claims match the current filters.</p>
+                </div>`;
+            return;
+        }
+
+        listEl.innerHTML = claims.map(c => {
+            const risk    = riskLevel(c);
+            const status  = c.moderatorStatus || "pending";
+            const verdict = c.credibility     || "Unverified";
+            const color   = VERDICT_COLORS[verdict] || "var(--text-muted)";
+            const preview = truncate(c.inputText, 80);
+            const date    = formatDate(c.createdAt);
+
+            const statusBadge = {
+                pending:  `<span class="badge badge-amber">Pending</span>`,
+                approved: `<span class="badge badge-green">Approved</span>`,
+                rejected: `<span class="badge badge-red">Rejected</span>`,
+            }[status] || `<span class="badge badge-gray">${status}</span>`;
+
+            return `
+            <div class="claim-row${selectedId === c.id ? " selected" : ""}"
+                 data-id="${c.id}" onclick="selectClaim('${c.id}')">
+                <div style="display:flex; justify-content:center; align-items:center;">
+                    <div class="risk-dot ${risk}"></div>
+                </div>
+                <div class="claim-body">
+                    <div class="claim-text">${preview}</div>
+                    <div class="claim-meta">
+                        <span class="claim-meta-item">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            ${date}
+                        </span>
+                        <span class="claim-meta-item">by ${c.userEmail || "Guest"}</span>
+                    </div>
+                </div>
+                <div class="claim-verdict" style="color:${color};">${verdict}</div>
+                <div class="claim-status">${statusBadge}</div>
+            </div>`;
+        }).join("");
+
+        // Update stats
+        updateStats();
+    }
+
+    function updateStats() {
+        const pending  = allClaims.filter(c => !c.moderatorStatus || c.moderatorStatus === "pending").length;
+        const approved = allClaims.filter(c => c.moderatorStatus === "approved").length;
+        const rejected = allClaims.filter(c => c.moderatorStatus === "rejected").length;
+
+        document.getElementById("statPending").textContent  = pending;
+        document.getElementById("statApproved").textContent = approved;
+        document.getElementById("statRejected").textContent = rejected;
+        document.getElementById("statTotal").textContent    = allClaims.length;
+        document.getElementById("pendingBadge").textContent = pending;
+    }
+
+    // ── Render detail panel ───────────────────────────────
+    window.selectClaim = function(id) {
+        selectedId = id;
+        renderList(); // re-render to highlight selected
+
+        const claim = allClaims.find(c => c.id === id);
+        if (!claim) return;
+
+        const empty   = document.getElementById("detailEmpty");
+        const content = document.getElementById("detailContent");
+
+        empty.style.display   = "none";
+        content.style.display = "flex";
+
+        const verdict     = claim.credibility  || "Unverified";
+        const confidence  = claim.confidence   || 0;
+        const explanation = claim.explanation  || "No explanation provided.";
+        const status      = claim.moderatorStatus || "pending";
+        const verdictColor = VERDICT_COLORS[verdict] || "var(--text-muted)";
+
+        const supportSources    = (claim.supportingSources    || []).filter(s => s && s !== "No links found");
+        const contradictSources = (claim.contradictingSources || []).filter(s => s && s !== "No links found");
+
+        const statusBadge = {
+            pending:  `<span class="badge badge-amber">Pending Review</span>`,
+            approved: `<span class="badge badge-green">Approved</span>`,
+            rejected: `<span class="badge badge-red">Rejected</span>`,
+        }[status] || "";
+
+        const actionButtons = status === "pending" ? `
+            <button class="mod-btn mod-btn-approve" onclick="handleAction('${id}', 'approved')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Approve
+            </button>
+            <button class="mod-btn mod-btn-reject" onclick="handleAction('${id}', 'rejected')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Reject
+            </button>` : `
+            <div style="font-size:0.8rem; color:var(--text-muted); text-align:center; width:100%; padding:0.25rem;">
+                This claim has been <strong style="color:var(--text-secondary);">${status}</strong>.
+                ${status !== "pending" ? `<button class="mod-btn mod-btn-ghost" 
+                    onclick="handleAction('${id}', 'pending')" 
+                    style="margin-top:0.5rem; width:100%; justify-content:center; font-size:0.78rem;">
+                    ↩ Revert to Pending
+                </button>` : ""}
+            </div>`;
+
+        content.innerHTML = `
+            <div class="detail-header">
+                <span class="detail-header-title">Claim Review</span>
+                <div style="display:flex; align-items:center; gap:0.75rem;">
+                    ${statusBadge}
+                    <button class="detail-close" onclick="closeDetail()">✕</button>
+                </div>
+            </div>
+
+            <div class="detail-body">
+
+                <div class="detail-section">
+                    <div class="detail-section-label">Submitted Text</div>
+                    <div class="detail-claim-text">"${claim.inputText || "No text available"}"</div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="detail-section-label">AI Verdict</div>
+                    <div class="detail-verdict-box" style="background: ${verdictColor}18; border-color: ${verdictColor}30;">
+                        <div>
+                            <div class="detail-verdict-label">Credibility</div>
+                            <div class="detail-verdict-value" style="color:${verdictColor};">${verdict}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="detail-verdict-label">Confidence</div>
+                            <div class="detail-verdict-value" style="color:var(--text-accent);">${confidence}%</div>
+                            <div class="confidence-bar-wrap">
+                                <div class="confidence-bar-track">
+                                    <div class="confidence-bar-fill" style="width:${confidence}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <div class="detail-section-label">AI Explanation</div>
+                    <div class="detail-explanation">${explanation}</div>
+                </div>
+
+                ${claim.claims ? `
+                <div class="detail-section">
+                    <div class="detail-section-label">Claims Identified</div>
+                    <div class="detail-explanation">${claim.claims}</div>
+                </div>` : ""}
+
+                ${supportSources.length > 0 ? `
+                <div class="detail-section">
+                    <div class="detail-section-label">Supporting Sources</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:0.25rem;">
+                        ${supportSources.map(s => `<a href="${s}" target="_blank" rel="noopener" class="source-chip">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                            </svg>
+                            ${s.replace(/https?:\/\/(www\.)?/,"").substring(0,30)}
+                        </a>`).join("")}
+                    </div>
+                </div>` : ""}
+
+                ${contradictSources.length > 0 ? `
+                <div class="detail-section">
+                    <div class="detail-section-label">Contradicting Sources</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:0.25rem;">
+                        ${contradictSources.map(s => `<a href="${s}" target="_blank" rel="noopener" class="source-chip" style="border-color:rgba(248,113,113,0.2); color:var(--red);">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                                <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                            </svg>
+                            ${s.replace(/https?:\/\/(www\.)?/,"").substring(0,30)}
+                        </a>`).join("")}
+                    </div>
+                </div>` : ""}
+
+                <div class="detail-section">
+                    <div class="detail-section-label">Moderator Note (optional)</div>
+                    <textarea class="mod-note-input" id="modNote"
+                              placeholder="Add a note about this verdict decision…">${claim.moderatorNote || ""}</textarea>
+                </div>
+
+            </div>
+
+            <div class="detail-actions">
+                ${actionButtons}
+            </div>`;
+    };
+
+    window.closeDetail = function() {
+        selectedId = null;
+        document.getElementById("detailEmpty").style.display   = "flex";
+        document.getElementById("detailContent").style.display = "none";
+        renderList();
+    };
+
+    // ── Approve / Reject / Revert ─────────────────────────
+    window.handleAction = async function(id, newStatus) {
+        const note = document.getElementById("modNote")?.value || "";
+
+        // Optimistic update
+        const idx = allClaims.findIndex(c => c.id === id);
+        if (idx !== -1) allClaims[idx].moderatorStatus = newStatus;
+
+        renderList();
+        selectClaim(id); // re-render detail with new status
+
+        const result = await updateClaimStatus(id, newStatus, note, modProfile.uid);
+
+        if (result.error) {
+            toast("Failed to update: " + result.error, "error");
+            // Roll back
+            if (idx !== -1) allClaims[idx].moderatorStatus = "pending";
+            renderList();
+            return;
+        }
+
+        await logActivity(modProfile.uid, `claim_${newStatus}`, { claimId: id, note });
+
+        const labels = { approved:"Verdict approved ✓", rejected:"Verdict rejected ✗", pending:"Reverted to pending" };
+        toast(labels[newStatus] || "Updated", newStatus === "rejected" ? "error" : "success");
+    };
+
+    // ── Load claims ───────────────────────────────────────
+    async function loadClaims() {
+        allClaims = await getClaims();
+
+        // Sort: pending first, then by date desc
+        allClaims.sort((a, b) => {
+            const aP = !a.moderatorStatus || a.moderatorStatus === "pending";
+            const bP = !b.moderatorStatus || b.moderatorStatus === "pending";
+            if (aP && !bP) return -1;
+            if (!aP && bP) return 1;
+            const aT = a.createdAt?.toDate?.() || new Date(0);
+            const bT = b.createdAt?.toDate?.() || new Date(0);
+            return bT - aT;
+        });
+
+        renderList();
+    }
+
+    // ── Filter listeners ──────────────────────────────────
+    ["filterStatus","filterVerdict","filterRisk"].forEach(id => {
+        document.getElementById(id).addEventListener("change", renderList);
+    });
+
+    // ── Sign out ──────────────────────────────────────────
+    document.getElementById("signOutBtn").addEventListener("click", () => modSignOut());
+
+    // ── Refresh ───────────────────────────────────────────
+    document.getElementById("refreshBtn").addEventListener("click", async () => {
+        document.getElementById("refreshBtn").disabled = true;
+        await loadClaims();
+        document.getElementById("refreshBtn").disabled = false;
+        toast("Claims refreshed");
+    });
+
+    // ── Init: require moderator auth, then load data ──────
+    requireMod(async (profile) => {
+        modProfile = profile;
+        await loadClaims();
+    });
+</script>
+
+</body>
+</html>
