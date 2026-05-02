@@ -40,7 +40,7 @@ async function runAI() {
     try {
         console.log("Sending to backend:", text || url);
 
-        const response = await fetch("http://127.0.0.1:3000/verify", {
+        const response = await fetch("/api/verify", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
