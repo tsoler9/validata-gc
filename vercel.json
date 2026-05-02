@@ -2,7 +2,7 @@
   "version": 2,
   "builds": [
     {
-      "src": "public/index.html",
+      "src": "public/**/*",
       "use": "@vercel/static"
     },
     {
@@ -20,20 +20,8 @@
       "dest": "/public/index.html"
     },
     {
-      "src": "/moderator/(.*)",
-      "dest": "/public/moderator/$1"
-    },
-    {
-      "src": "/admin/(.*)",
-      "dest": "/public/admin/$1"
-    },
-    {
-      "src": "/(.*\\.(css|js|html|png|jpg|ico))",
+      "src": "/(.*)",
       "dest": "/public/$1"
-    },
-    {
-      "src": "/([^.]+)",
-      "dest": "/public/$1.html"
     }
   ]
 }
