@@ -1,9 +1,1 @@
-{
-  "version": 2,
-  "routes": [
-    {
-      "src": "/api/verify",
-      "dest": "/api/verify.js"
-    }
-  ]
-}
+{}
