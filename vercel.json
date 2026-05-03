@@ -2,16 +2,16 @@
   "outputDirectory": "public",
   "routes": [
     {
-      "src": "^/$",
-      "dest": "/public/landing.html"
-    },
-    {
       "src": "/api/verify",
       "dest": "/api/verify.js"
     },
     {
+      "src": "^/$",
+      "dest": "/landing.html"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/public/$1"
+      "dest": "/$1"
     }
   ]
 }
