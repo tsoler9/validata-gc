@@ -1,3 +1,17 @@
 {
-  "outputDirectory": "public"
+  "outputDirectory": "public",
+  "routes": [
+    {
+      "src": "^/$",
+      "dest": "/public/landing.html"
+    },
+    {
+      "src": "/api/verify",
+      "dest": "/api/verify.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/public/$1"
+    }
+  ]
 }
